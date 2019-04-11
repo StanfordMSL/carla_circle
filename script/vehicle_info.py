@@ -127,7 +127,7 @@ class AckermannController:
             steer = self.compute_ackermann_cmd(target_pt)
             cmd_msg.steering_angle = steer
             cmd_msg.speed = target_speed
-            cmd_msg.acceleration = 0.5
+            cmd_msg.acceleration = 3
         self.command_pub.publish(cmd_msg)
 
     def compute_ackermann_cmd(self, target_pt):
@@ -140,6 +140,7 @@ class AckermannController:
         rel_pos_unit = rel_pos / np.linalg.norm(rel_pos)
         rot = np.cross(rel_pos_unit, egoOri)
         steer = -rot[2] * self.pid_str_prop
+
 
         return steer
 

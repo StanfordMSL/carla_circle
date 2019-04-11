@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+	<node name="traj_braadcaster" pkg="carla_circle" type="traj_publisher.py" output="screen" />
+	<node name="car_filter" pkg="carla_circle" type="car_filter.py" output="screen" />
+	<node name="controller" pkg="carla_circle" type="controller.py" output="screen">
+		<param name="ctrl_freq" value="100" />
+		<param name="str_prop" value="0.5" />
+    <param name="plan_steps" value="30" />
+	</node>
+
+
+</launch>
