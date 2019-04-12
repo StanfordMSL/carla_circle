@@ -52,9 +52,7 @@ class AckermannController:
         rospy.init_node("controller", anonymous=True)
 
         # # retrieve ros parameters
-        # self.traj_horizon = rospy.get_param("~horizon")
         self.traj_steps = rospy.get_param("~plan_steps")
-        # self.traj_time_step = float(self.traj_horizon) / self.traj_steps
         ctrl_freq = rospy.get_param("~ctrl_freq")
 
         # state information
@@ -114,13 +112,13 @@ class AckermannController:
 
             # pick target w/o collision avoidance, closest point on the traj and one point ahead
             _, idx = self.path_tree.query([pos_x, pos_y])
-            if idx < self.traj_steps - 1:
-                target_pt = self.path_tree.data[idx + 1, :]
-                target_vel = self.vel_path[idx + 1, :]
+            if idx < self.traj_steps - 2:
+                target_pt = self.path_tree.data[idx + 2, :]
+                target_vel = self.vel_path[idx + 2, :]
             else:
-                target_pt = self.path_tree.data[-1, :]
-                target_vel = self.vel_path[-1, :]
-                print("at the end of the desired waypoits!!!")
+                target_pt = self.path_tree.data[1, :]
+                target_vel = self.vel_path[1, :]
+                # print("at the end of the desired waypoits!!!")
 
             target_speed = np.linalg.norm(target_vel)
 
