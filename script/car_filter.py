@@ -26,7 +26,6 @@ class CarFilter:
         msg.header = objectarray_msg.header
         msg.objects = [obj for obj in objectarray_msg.objects if valid_car(obj)]
         end = timeit.default_timer()
-        print("this is the time taken", end - start)
         self.filter_pub.publish(msg)
 
 
