@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# author: mingyuw@stanford.edu
+# this node filters nearby vehicles based on distance
+
 import rospy
 from derived_object_msgs.msg import ObjectArray
 from visualization_msgs.msg import Marker, MarkerArray
@@ -11,8 +14,8 @@ class CarFilter:
     def __init__(self):
         rospy.init_node("perception", anonymous=True)
         rospy.Subscriber("/carla/objects", ObjectArray, self.allcar_cb)
-        self.filter_pub = rospy.Publisher("/carla/relevant_obj", ObjectArray, queue_size=10)
-        self.viz_pub = rospy.Publisher("/carla/viz/relevant_markers", MarkerArray, queue_size=10)
+        self.filter_pub = rospy.Publisher("/carla/nearby_obj", ObjectArray, queue_size=10)
+        self.viz_pub = rospy.Publisher("/carla/viz/nearby_markers", MarkerArray, queue_size=10)
 
     def allcar_cb(self, objectarray_msg):
         start = timeit.default_timer()
@@ -41,6 +44,7 @@ class CarFilter:
             mk.color.a = 1
             mk.pose = obj.pose
             mk.id = count
+            mk.lifetime = rospy.Duration(0.05)
             viz_msg.markers.append(mk)
             count += 1
         self.viz_pub.publish(viz_msg)

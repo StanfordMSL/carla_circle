@@ -9,7 +9,7 @@ from visualization_msgs.msg import Marker
 
 def talker():
     rospy.init_node('traj_commander', anonymous=True)
-    pub = rospy.Publisher('desired_waypoints', MultiDOFJointTrajectory, queue_size=10)
+    pub = rospy.Publisher('/carla/ego_vehicle/desired_waypoints', MultiDOFJointTrajectory, queue_size=10)
     viz_pub = rospy.Publisher('viz/desired_waypoints', Marker, queue_size=10)
 
     rate = rospy.Rate(20)
@@ -30,14 +30,14 @@ def talker():
 
         pts = []
         num_pt = 30
-        radius = 20
+        radius = 19.5
         ang_inc = 2.0 * math.pi / num_pt
         for i in range(num_pt):
             ang = ang_inc * i
             pt = MultiDOFJointTrajectoryPoint()
-            pt.transforms = [Transform(Vector3(radius * math.cos(ang), radius * math.sin(ang), 0), \
+            pt.transforms = [Transform(Vector3(radius * math.cos(ang) - 0.5, radius * math.sin(ang) - 0.3, 0), \
                             Quaternion(0,0,0,1))]
-            pt.velocities = [Twist(Vector3(5, 0, 0), Vector3(0,0,0))]
+            pt.velocities = [Twist(Vector3(6, 0, 0), Vector3(0, 0, 0))]
             viz_msg.points.append(Point(radius * math.cos(ang), radius * math.sin(ang), 0))
             pts.append(pt)
         msg.points = pts
