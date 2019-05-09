@@ -108,33 +108,54 @@ def main():
         # -----------------------------------
         # plot round about road network
         # -----------------------------------
-        # waypoints = world.get_map().get_topology()
-        # dense_waypoint = world.get_map().generate_waypoints(2.0)
+        waypoints = world.get_map().get_topology()
+        dense_waypoint = map.generate_waypoints(20.0)
+        print("these are all the waypoints", dense_waypoint)
+        dense_mat = []
+        for waypt in dense_waypoint:
+            dense_mat.append([waypt.transform.location.x, waypt.transform.location.y])
+        dense_mat = np.asarray(dense_mat)
+        fig = plt.figure()
+        plt.scatter(dense_mat[:,0], -dense_mat[:,1],s=1)
+        # plt.show()
         #
         #
         #
-        # waypoints_Set = set()
-        # #
+        waypoints_Set = set()
+        #
         # fig = plt.figure()
-        # for first_pt, second_pt in waypoints:
-        #     pt1 = (round(first_pt.transform.location.x, 2), round(first_pt.transform.location.y, 2))
-        #     pt2 = (round(second_pt.transform.location.x, 2), round(second_pt.transform.location.y, 2))
-        #     if np.linalg.norm(pt1) < 60 and np.linalg.norm(pt2) < 60:
-        #         waypoints_Set.add(pt1)
-        #         waypoints_Set.add(pt2)
-        #         plt.text(first_pt.transform.location.x, first_pt.transform.location.y, s="l:" + str(first_pt.lane_id))
-        #         plt.text(first_pt.transform.location.x, first_pt.transform.location.y+2, s="r:" + str(first_pt.road_id))
-        #         print("here is the first point", first_pt.transform.location.x, first_pt.transform.location.y, " its road id", first_pt.road_id)
-        #         # plt.text(first_pt.transform.location.x, first_pt.transform.location.y+2, s="lane width:" + str(first_pt.lane_width))
-        #         plt.plot([first_pt.transform.location.x, second_pt.transform.location.x], \
-        #                 [-first_pt.transform.location.y, -second_pt.transform.location.y])
+        for first_pt, second_pt in waypoints:
+            pt1 = (round(first_pt.transform.location.x, 2), round(first_pt.transform.location.y, 2))
+            pt2 = (round(second_pt.transform.location.x, 2), round(second_pt.transform.location.y, 2))
+            # if np.linalg.norm(pt1) < 60 and np.linalg.norm(pt2) < 60:
+                # waypoints_Set.add(pt1)
+                # waypoints_Set.add(pt2)
+                # plt.text(first_pt.transform.location.x, first_pt.transform.location.y, s="l:" + str(first_pt.lane_id))
+                # plt.text(first_pt.transform.location.x, first_pt.transform.location.y+2, s="r:" + str(first_pt.road_id))
+                # print("here is the first point", first_pt.transform.location.x, first_pt.transform.location.y, " its road id", first_pt.road_id)
+                # plt.text(first_pt.transform.location.x, first_pt.transform.location.y+2, s="lane width:" + str(first_pt.lane_width))
+            plt.plot([first_pt.transform.location.x, second_pt.transform.location.x], \
+                    [-first_pt.transform.location.y, -second_pt.transform.location.y])
         # print("this is the whole list", map)
         # print("these are all the waypoints", len(waypoints_Set))
         # print("----------------")
         # print(np.asarray(list(waypoints_Set)))
         # waypoint_tree = KDTree(np.asarray(list(waypoints_Set)))
-        # plt.grid()
+        plt.grid()
 
+
+        # -----------------------------------
+        # print all the spawn points
+        # -----------------------------------
+
+        spawn_points = map.get_spawn_points()
+        print("all the points", spawn_points)
+        spawn_points_mat = []
+        for s_point in spawn_points:
+            spawn_points_mat.append([s_point.location.x, s_point.location.y])
+        spawn_points_mat = np.asarray(spawn_points_mat)
+        plt.scatter(spawn_points_mat[:,0], -spawn_points_mat[:,1])
+        plt.show()
 
 
 
@@ -181,37 +202,37 @@ def main():
         # generate dense waypoints for ego car in the circle
         # ----------------------------
 
-        waypoints = map.generate_waypoints(5.0)
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        waypoints_list = []
-        ang = []
-        for wy in waypoints:
-            dist = np.linalg.norm([wy.transform.location.x, wy.transform.location.y])
-            if dist < 50:
-                plt.scatter(wy.transform.location.x, -wy.transform.location.y)
-                waypoints_list.append([wy.transform.location.x, -wy.transform.location.y])
-                ang.append(np.arctan2(wy.transform.location.y, wy.transform.location.x))
-        waypoints_array = np.asarray(waypoints_list)
-        sort_index = np.argsort(ang)
-        sorted_waypoints = waypoints_array[sort_index, :]
-        print("these are the sorted waypoits", sorted_waypoints)
-        # plt.plot(sorted_waypoints[:,0], sorted_waypoints[:,1])
-
-
-        radius = 20
-        ang_increment = 2* np.pi / 300
-        ang = [i * ang_increment for i in range(300)]
-        circle = np.zeros((300, 2))
-        circle[:,0] = radius * np.cos(ang) - 0.5
-        circle[:,1] = radius * np.sin(ang) - 0.3
-        plt.plot(circle[:,0], circle[:,1])
-        ticks = np.arange(-40, 40, 5)
-        ax.set_xticks(ticks)
-        ax.set_yticks(ticks)
-        plt.grid()
-        plt.axis("equal")
-        plt.show()
+        # waypoints = map.generate_waypoints(5.0)
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111)
+        # waypoints_list = []
+        # ang = []
+        # for wy in waypoints:
+        #     dist = np.linalg.norm([wy.transform.location.x, wy.transform.location.y])
+        #     if dist < 50:
+        #         plt.scatter(wy.transform.location.x, -wy.transform.location.y)
+        #         waypoints_list.append([wy.transform.location.x, -wy.transform.location.y])
+        #         ang.append(np.arctan2(wy.transform.location.y, wy.transform.location.x))
+        # waypoints_array = np.asarray(waypoints_list)
+        # sort_index = np.argsort(ang)
+        # sorted_waypoints = waypoints_array[sort_index, :]
+        # print("these are the sorted waypoits", sorted_waypoints)
+        # # plt.plot(sorted_waypoints[:,0], sorted_waypoints[:,1])
+        #
+        #
+        # radius = 20
+        # ang_increment = 2* np.pi / 300
+        # ang = [i * ang_increment for i in range(300)]
+        # circle = np.zeros((300, 2))
+        # circle[:,0] = radius * np.cos(ang) - 0.5
+        # circle[:,1] = radius * np.sin(ang) - 0.3
+        # plt.plot(circle[:,0], circle[:,1])
+        # ticks = np.arange(-40, 40, 5)
+        # ax.set_xticks(ticks)
+        # ax.set_yticks(ticks)
+        # plt.grid()
+        # plt.axis("equal")
+        # plt.show()
 
 
 

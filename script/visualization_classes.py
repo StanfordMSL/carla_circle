@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+# author: mingyuw@stanford.edu
+
+# includes all the class need for rviz visualization, note that the RoadGeometryVisualization
+# is deprecated. should use the viz_road_network script for road visualization
+# maybe combine them together???
+
+
 import rospy
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point

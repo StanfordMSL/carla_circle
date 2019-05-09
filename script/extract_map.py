@@ -1,4 +1,11 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
+
+
+
+'''
+this script is used to write the /carla/map message to a file
+author: mingyuw@stanford.edu
+'''
 import rospy
 from std_msgs.msg import String
 
@@ -12,7 +19,7 @@ class Writer:
         rospy.Subscriber('/carla/map', String, self.map_cb)
 
         self.recorded = False
-      
+
         self.map_file = open("/home/mingyu/catkin_ws/src/ros-bridge/resource/map", "w")
 
     def map_cb(self, msg):
