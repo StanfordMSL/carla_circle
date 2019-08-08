@@ -1,12 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <launch>
-	<node name="traj_braadcaster" pkg="carla_circle" type="traj_publisher.py" output="screen" />
+
+	<arg name="time_step" default="0.5" />
+	<arg name="horizon" default="5" />
+	<arg name="reference_speed" default="5.5" />
+
+	<!-- planning module -->
+	<node name="traj_planner" pkg="carla_circle" type="planner.py" output="screen" >
+		<param name="time_step" value="$(arg time_step)" />
+		<param name="horizon" value="$(arg horizon)" />
+		<param name="reference_speed" value="$(arg reference_speed)" />
+	</node>
+	<!-- <node name="traj_broadcaster" pkg="carla_circle" type="traj_publisher.py" output="screen" /> -->
+	<node name="path_server" pkg="carla_circle" type="path_server.py" output="screen" />
+
+	<!-- "perception module" -->
 	<node name="car_filter" pkg="carla_circle" type="car_filter.py" output="screen" />
+	<node name="relevant_car_filter" pkg="carla_circle" type="relevant_vehicle.py" output="screen" >
+		<param name="time_step" value="$(arg time_step)" />
+		<param name="horizon" value="$(arg horizon)" />
+	</node>
+
+  <!-- controller module  -->
 	<node name="controller" pkg="carla_circle" type="controller.py" output="screen">
+		<param name="time_step" value="$(arg time_step)" />
 		<param name="ctrl_freq" value="100" />
 		<param name="str_prop" value="0.6" />
     <param name="plan_steps" value="30" />
 	</node>
 
+	<!-- visualization -->
+	<node name="viz_node" pkg="carla_circle" type="visualization_node.py" output="screen" />
 </launch>

@@ -1,0 +1,7 @@
+# ---------------- /GetAvailablePath.msg -------------------
+# Custom ROS service to get available list of paths from a
+# current location
+
+geometry_msgs/Pose pose
+---
+carla_circle/PathArray paths

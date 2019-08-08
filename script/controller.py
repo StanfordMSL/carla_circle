@@ -1,5 +1,11 @@
 #!/usr/bin/env python
+# author: mingyuw@stanford.edu
 
+"""
+given desired waypoints, this ros node sends the ackermann steering command for
+the ego vehicle to follow the trajectory
+TODO: send acceleration instead of speed directly
+"""
 
 import rospy
 import tf
@@ -34,6 +40,7 @@ class odom_state(object):
         self.vx = odom_msg.twist.twist.linear.x
         self.vy = odom_msg.twist.twist.linear.y
         self.speed = np.sqrt(self.vx**2 + self.vy**2)
+        # print("this is the current speed", self.speed)
 
     def get_position(self):
         return [self.x, self.y]
@@ -48,10 +55,12 @@ class odom_state(object):
         return self.speed
 
 class AckermannController:
+    MAC_ACCELERATION = 1.0
     def __init__(self):
         rospy.init_node("controller", anonymous=True)
 
         # # retrieve ros parameters
+        self.time_step = rospy.get_param("~time_step")
         self.traj_steps = rospy.get_param("~plan_steps")
         ctrl_freq = rospy.get_param("~ctrl_freq")
 
@@ -66,16 +75,11 @@ class AckermannController:
         self.vel_path = np.zeros(shape=(self.traj_steps, 2))
 
         # # PID controller parameter
-        # self.pid = None
-        # self.pid_motor_offset = rospy.get_param("~motor_offset")
-        # self.pid_ff_prop = rospy.get_param("~ff_prop")
-        # self.pid_fb_prop = rospy.get_param("~fb_prop")
-        # self.pid_brake = rospy.get_param("~brake")
         self.pid_str_prop = rospy.get_param("~str_prop")
 
         # subscribers, publishers
         rospy.Subscriber("/carla/ego_vehicle/odometry", Odometry, self.odom_cb)
-        rospy.Subscriber("desired_waypoints", MultiDOFJointTrajectory, self.desired_waypoints_cb)
+        rospy.Subscriber("/carla/ego_vehicle/desired_waypoints", MultiDOFJointTrajectory, self.desired_waypoints_cb)
         self.command_pub = rospy.Publisher("/carla/ego_vehicle/ackermann_cmd", AckermannDrive, queue_size=10)
         self.ctrl_timer = rospy.Timer(rospy.Duration(1.0/ctrl_freq), self.timer_cb)
 
@@ -125,11 +129,19 @@ class AckermannController:
             steer = self.compute_ackermann_cmd(target_pt)
             cmd_msg.steering_angle = steer
             cmd_msg.speed = target_speed
-            cmd_msg.acceleration = 0.5
+            if self.state.get_speed() - target_speed > 1.0:
+                cmd_msg.acceleration = (target_speed - self.state.get_speed()) / (self.time_step * 2)
+            elif target_speed - self.state.get_speed() > 1.0:
+                cmd_msg.acceleration = np.min([3, (target_speed - self.state.get_speed()) / (self.time_step * 2)])
+            else:
+                cmd_msg.acceleration = 0
         self.command_pub.publish(cmd_msg)
 
     def compute_ackermann_cmd(self, target_pt):
         pos_x, pos_y, yaw = self.state.get_pose()
+        if np.linalg.norm([target_pt[0] - pos_x, target_pt[1] - pos_y]) < 1:
+            print("target point too close!!!!!!!!")
+            return 0.2
 
         egoOri = np.array([np.cos(yaw), np.sin(yaw), 0])
         rel_pos = np.array([target_pt[0] - pos_x, target_pt[1] - pos_y, 0])

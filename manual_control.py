@@ -157,7 +157,8 @@ class World(object):
         blueprint.set_attribute('role_name', 'hero')
 #        blueprint.set_attribute('role_name', 'ego_vehicle')
         if blueprint.has_attribute('color'):
-            color = random.choice(blueprint.get_attribute('color').recommended_values)
+            # color = random.choice(blueprint.get_attribute('color').recommended_values)
+            color = "255,255,255"
             blueprint.set_attribute('color', color)
         # Spawn the vehicle.
         if self.vehicle is not None:
@@ -170,7 +171,7 @@ class World(object):
         while self.vehicle is None:
             # spawn_points = self.world.get_map().get_spawn_points()
             # spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
-            spawn_point = Transform(Location(x=0.8063, y=20.0, z=2.5), Rotation(pitch=0, yaw=0.0001, roll=0))
+            spawn_point = Transform(Location(x=0.8063, y=19.5, z=2.5), Rotation(pitch=0, yaw=0.0001, roll=0))
             self.vehicle = self.world.try_spawn_actor(blueprint, spawn_point)
         # Set up the sensors.
         self.collision_sensor = CollisionSensor(self.vehicle, self.hud)
