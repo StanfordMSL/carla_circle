@@ -85,8 +85,8 @@ def main():
     entry_waypoints_1 = generate_entry_waypoints(
         entry_location_1,
         offset=carla.Vector3D(0.0, -1.75, 0.0),
-        number_of_points=20,
-        distance=20.0,
+        number_of_points=40,
+        distance=40.0,
         debug=debug_flag
     )
 
@@ -94,8 +94,8 @@ def main():
     entry_waypoints_2 = generate_entry_waypoints(
         entry_location_2,
         offset=carla.Vector3D(-1.75, 0.0, 0.0),
-        number_of_points=20,
-        distance=20.0,
+        number_of_points=40,
+        distance=40.0,
         debug=debug_flag
     )
 
@@ -103,7 +103,7 @@ def main():
     entry_waypoints_3 = generate_entry_waypoints(
         entry_location_3,
         offset=carla.Vector3D(0.0, -1.75, 0.0),
-        number_of_points=20,
+        number_of_points=40,
         distance=30.0,
         debug=debug_flag
     )
@@ -112,8 +112,8 @@ def main():
     entry_waypoints_4 = generate_entry_waypoints(
         entry_location_4,
         offset=carla.Vector3D(1.75, 0.0, 0.0),
-        number_of_points=20,
-        distance=20.0,
+        number_of_points=40,
+        distance=30.0,
         debug=debug_flag
     )
 
@@ -121,8 +121,8 @@ def main():
     exit_waypoints = generate_entry_waypoints(
         exit_location,
         offset=carla.Vector3D(0.0, 1.75, 0.0),
-        number_of_points=20,
-        distance=20.0,
+        number_of_points=30,
+        distance=30.0,
         debug=debug_flag
     )
 
@@ -132,6 +132,7 @@ def main():
     entry_waypoints_2.tofile("resource/entry_waypoints_2.nparray")
     entry_waypoints_3.tofile("resource/entry_waypoints_3.nparray")
     entry_waypoints_4.tofile("resource/entry_waypoints_4.nparray")
+    exit_waypoints.tofile("resource/exit_waypoints.nparray")
 
     # Visualize the generated waypoints
     if draw_flag:
