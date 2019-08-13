@@ -62,9 +62,6 @@ def compute_all_paths_from_location(
         path_length,
         verbose
     )
-    
-    if verbose:
-        draw_paths(paths, carla_world)
 
     return paths
 
