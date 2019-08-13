@@ -144,7 +144,7 @@ def get_actor_display_name(actor, truncate=250):
 
 
 class World(object):
-    def __init__(self, carla_world, hud, actor_filter, actor_role_name='hero'):
+    def __init__(self, carla_world, hud, actor_filter, actor_role_name='ego_vehicle'):
         self.world = carla_world
         self.actor_role_name = actor_role_name
         self.map = self.world.get_map()
@@ -854,8 +854,8 @@ def main():
     argparser.add_argument(
         '--rolename',
         metavar='NAME',
-        default='hero',
-        help='actor role name (default: "hero")')
+        default='ego_vehicle',
+        help='actor role name (default: "ego_vehicle")')
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]

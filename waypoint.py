@@ -28,6 +28,7 @@ import random
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator
 from collections import defaultdict
 from scipy.spatial import KDTree
 
@@ -110,18 +111,20 @@ def main():
         # -----------------------------------
         waypoints = world.get_map().get_topology()
         dense_waypoint = map.generate_waypoints(20.0)
-        print("these are all the waypoints", dense_waypoint)
+        # print("these are all the waypoints", dense_waypoint)
         dense_mat = []
         for waypt in dense_waypoint:
             dense_mat.append([waypt.transform.location.x, waypt.transform.location.y])
         dense_mat = np.asarray(dense_mat)
         fig = plt.figure()
-        plt.scatter(dense_mat[:,0], -dense_mat[:,1],s=1)
+        ax = fig.add_subplot(111)
+        ax.scatter(dense_mat[:,0], -dense_mat[:,1],s=1)
         # plt.show()
         #
         #
         #
         waypoints_Set = set()
+        topo_waypt_mat = []
         #
         # fig = plt.figure()
         for first_pt, second_pt in waypoints:
@@ -134,28 +137,38 @@ def main():
                 # plt.text(first_pt.transform.location.x, first_pt.transform.location.y+2, s="r:" + str(first_pt.road_id))
                 # print("here is the first point", first_pt.transform.location.x, first_pt.transform.location.y, " its road id", first_pt.road_id)
                 # plt.text(first_pt.transform.location.x, first_pt.transform.location.y+2, s="lane width:" + str(first_pt.lane_width))
-            plt.plot([first_pt.transform.location.x, second_pt.transform.location.x], \
+            if np.linalg.norm(pt1) < 80 and np.linalg.norm(pt2) < 80:
+                topo_waypt_mat.append([pt1[0], pt1[1], pt2[0], pt2[1]])
+
+                ax.plot([first_pt.transform.location.x, second_pt.transform.location.x], \
                     [-first_pt.transform.location.y, -second_pt.transform.location.y])
+        print("-------------------------")
+        print(topo_waypt_mat)
+        print("-------------------------")
         # print("this is the whole list", map)
         # print("these are all the waypoints", len(waypoints_Set))
         # print("----------------")
         # print(np.asarray(list(waypoints_Set)))
         # waypoint_tree = KDTree(np.asarray(list(waypoints_Set)))
-        plt.grid()
+        spacing = 2
+        minorLocator = MultipleLocator(spacing)
+        ax.xaxis.set_minor_locator(minorLocator)
+        ax.yaxis.set_minor_locator(minorLocator)
+        ax.grid(which="minor")
 
 
         # -----------------------------------
         # print all the spawn points
         # -----------------------------------
 
-        spawn_points = map.get_spawn_points()
-        print("all the points", spawn_points)
-        spawn_points_mat = []
-        for s_point in spawn_points:
-            spawn_points_mat.append([s_point.location.x, s_point.location.y])
-        spawn_points_mat = np.asarray(spawn_points_mat)
-        plt.scatter(spawn_points_mat[:,0], -spawn_points_mat[:,1])
-        plt.show()
+        # spawn_points = map.get_spawn_points()
+        # print("all the points", spawn_points)
+        # spawn_points_mat = []
+        # for s_point in spawn_points:
+        #     spawn_points_mat.append([s_point.location.x, s_point.location.y])
+        # spawn_points_mat = np.asarray(spawn_points_mat)
+        # plt.scatter(spawn_points_mat[:,0], -spawn_points_mat[:,1])
+        # plt.show()
 
 
 
@@ -232,7 +245,7 @@ def main():
         # ax.set_yticks(ticks)
         # plt.grid()
         # plt.axis("equal")
-        # plt.show()
+        plt.show()
 
 
 

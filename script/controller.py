@@ -78,8 +78,9 @@ class AckermannController:
         self.pid_str_prop = rospy.get_param("~str_prop")
 
         # subscribers, publishers
-        rospy.Subscriber("/carla/ego_vehicle/odometry", Odometry, self.odom_cb)
-        rospy.Subscriber("/carla/ego_vehicle/desired_waypoints", MultiDOFJointTrajectory, self.desired_waypoints_cb)
+        rospy.Subscriber("/MSLcar0/ground_truth/odometry", Odometry, self.odom_cb)
+        # rospy.Subscriber("/carla/ego_vehicle/desired_waypoints", MultiDOFJointTrajectory, self.desired_waypoints_cb)
+        rospy.Subscriber("/MSLcar0/command/trajectory", MultiDOFJointTrajectory, self.desired_waypoints_cb)
         self.command_pub = rospy.Publisher("/carla/ego_vehicle/ackermann_cmd", AckermannDrive, queue_size=10)
         self.ctrl_timer = rospy.Timer(rospy.Duration(1.0/ctrl_freq), self.timer_cb)
 

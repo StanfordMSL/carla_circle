@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+
+	<!-- <node name="odom_pub_node" pkg="carla_circle" type="odom_talker.py" output="screen" /> -->
+
+	<arg name="time_step" default="0.5" />
+	<arg name="horizon" default="5" />
+	<arg name="reference_speed" default="5.5" />
+
+	<!-- start service call for game node  -->
+	<node name="restart_call" pkg="carla_circle" type="game_start_client.py" output="screen" />
+
+	<!-- "perception module", acutally just filtering out cars that are relevant -->
+	<node name="car_filter" pkg="carla_circle" type="car_filter.py" output="screen" />
+	<node name="game_ado_car_filter" pkg="carla_circle" type="game_ado_vehicle_filter.py" output="screen" />
+
+
+	<!-- this node works for game planner to publish current track center and track width for two cars -->
+  <node name="map_updater" pkg="carla_circle" type="map_updater.py" output="screen" >
+    <param name="steps" value="20" />
+    <param name="distance" value="2" />
+    <param name="update_frequency" value="1" />
+  </node>
+
+	<!-- controller module  -->
+	<node name="controller" pkg="carla_circle" type="controller.py" output="screen">
+		<param name="time_step" value="$(arg time_step)" />
+		<param name="ctrl_freq" value="100" />
+		<param name="str_prop" value="0.6" />
+		<param name="plan_steps" value="30" />
+	</node>
+
+	<!-- visualization -->
+	<node name="viz_node" pkg="carla_circle" type="visualization_node.py" output="screen" />
+	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find carla_ros_bridge)/config/carla_default_rviz.cfg.rviz"/>
+</launch>
