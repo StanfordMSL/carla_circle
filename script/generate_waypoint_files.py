@@ -74,7 +74,9 @@ def main():
         sun_altitude_angle=68.0)
     carla_world.set_weather(weather)
 
-    debug_flag = True
+    debug_flag = False
+    delay_flag = False
+    draw_flag = False
 
     # Generate waypoints we care about for Event 4
     circle_waypoints = generate_circle_waypoints(100, debug_flag)
@@ -132,36 +134,36 @@ def main():
     entry_waypoints_4.tofile("resource/entry_waypoints_4.nparray")
 
     # Visualize the generated waypoints
-    if debug_flag:
+    if draw_flag:
         utilities.world.visualize_location_list(
             carla_world,
             circle_waypoints,
-            pause=debug_flag
+            pause=delay_flag
         )
         utilities.world.visualize_location_list(
             carla_world,
             entry_waypoints_1,
-            pause=debug_flag
+            pause=delay_flag
         )
         utilities.world.visualize_location_list(
             carla_world,
             entry_waypoints_2,
-            pause=debug_flag
+            pause=delay_flag
         )
         utilities.world.visualize_location_list(
             carla_world,
             entry_waypoints_3,
-            pause=debug_flag
+            pause=delay_flag
         )
         utilities.world.visualize_location_list(
             carla_world,
             entry_waypoints_4,
-            pause=debug_flag
+            pause=delay_flag
         )
         utilities.world.visualize_location_list(
             carla_world,
             exit_waypoints,
-            pause=debug_flag
+            pause=delay_flag
         )
     
 
