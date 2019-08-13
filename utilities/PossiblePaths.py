@@ -78,7 +78,7 @@ def compute_all_paths_for_actor(
     world = vehicle.get_world()
     location = vehicle.get_location()
     paths = compute_all_paths_from_location(
-        vehicle.get_location,
+        location,
         world,
         dist_between_waypoints,
         path_length,
