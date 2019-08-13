@@ -127,7 +127,7 @@ def main():
     )
 
     # Write waypoints to their respective files
-    circle_waypoints.tofile("resource/cirle_waypoints.nparray")
+    circle_waypoints.tofile("resource/circle_waypoints.nparray")
     entry_waypoints_1.tofile("resource/entry_waypoints_1.nparray")
     entry_waypoints_2.tofile("resource/entry_waypoints_2.nparray")
     entry_waypoints_3.tofile("resource/entry_waypoints_3.nparray")
