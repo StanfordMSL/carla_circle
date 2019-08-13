@@ -1,4 +1,4 @@
-import general_tree
+from utilities import general_tree
 
 def main():
     way1 = general_tree.TreeNode('1', [])
