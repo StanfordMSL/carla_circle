@@ -669,13 +669,14 @@ def game_loop(args):
             world.render(display)
             pygame.display.flip()
 
-            if count % 30 == 0:
-                utilities.PossiblePaths.compute_all_paths_for_actor(
+            if count % 60 == 0:
+                paths = utilities.PossiblePaths.compute_all_paths_for_actor(
                     world.vehicle,
-                    2.0,
+                    3.0,
                     20,
-                    True
+                    False
                 )
+                utilities.PossiblePaths.draw_paths(paths, world.world)
             
             count += 1
 
