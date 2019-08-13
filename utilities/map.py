@@ -1,5 +1,5 @@
 '''
-Utility functions related to a Carla Map object
+Utility functions related to a Carla Map object.
 
 '''
 import carla
