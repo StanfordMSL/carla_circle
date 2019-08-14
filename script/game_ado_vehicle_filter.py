@@ -217,15 +217,17 @@ class GameAdoCarFilter(object):
             if front_closest_obj:
                 ado_object = front_closest_obj
                 # ado_object = random.choice(relevant_msg.objects)
+
             elif behind_closest_obj:
                 ado_object = behind_closest_obj
+
             else:
                 # if there is no relevant car as opponent, then make up one
                 ado_object = Object()
                 ado_object.header.stamp = rospy.Time.now()
                 ado_object.header.frame_id = "map"
                 ado_object.pose.position.x = -5.5
-                ado_object.pose.position.y = 80
+                ado_object.pose.position.y = 170
                 ado_object.pose.position.z = 0
                 ado_object.pose.orientation.x = 0
                 ado_object.pose.orientation.y = 0
@@ -250,6 +252,8 @@ class GameAdoCarFilter(object):
             color_opp.b = 0
             color_opp.a = 1
             self.viz_cars([ado_object], header, color_opp, self.ado_marker_pub)
+
+
 
 
 

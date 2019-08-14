@@ -84,6 +84,9 @@ class oppTrackVisualizer(object):
         for i in range(len(msg.poses)-2):
             pos_x = msg.poses[i].pose.position.x
             pos_y = msg.poses[i].pose.position.y
+            if pos_y >= 60:
+                # this is for not visualizing the track for "fake" vehicle
+                return
             pos_x_n = msg.poses[i+1].pose.position.x
             pos_y_n = msg.poses[i+1].pose.position.y
             yaw = np.arctan2(pos_y_n - pos_y, pos_x_n - pos_x)
@@ -105,6 +108,7 @@ class oppTrackVisualizer(object):
             mk.pose.orientation.y = quat[1]
             mk.pose.orientation.z = quat[2]
             mk.pose.orientation.w = quat[3]
+            mk.lifetime = rospy.Duration(1)
             mk_ar.markers.append(mk)
 
         self.area_pub.publish(mk_ar)

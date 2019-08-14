@@ -20,7 +20,7 @@
   <node name="map_updater" pkg="carla_circle" type="map_updater.py" output="screen" >
     <param name="steps" value="20" />
     <param name="distance" value="2" />
-    <param name="update_frequency" value="1" />
+    <param name="update_frequency" value="10" />
   </node>
 
 	<!-- controller module  -->
