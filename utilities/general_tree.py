@@ -1,43 +1,6 @@
 from __future__ import print_function
 
 
-class GeneralTree(object):
-    def __init__(
-        self,
-        root,
-        name: str = 'Default Tree'
-    ):
-        self.root = root
-        self.name = name
-
-    def convert_tree_to_arrays(self):
-        arrays = []
-        create_path(self.root, [], 0)
-        print(arrays)
-
-        return arrays
-
-    def print_leaf(self, node):
-        if node:
-            node.print_node()
-
-    def print_tree(self):
-        if self.root:
-            print('')
-            print(self.name)
-            print_character_repeat(len(self.name), '-')
-            print('')
-            self.root.print_node()
-
-        print('')
-
-    def get_root(self):
-        return self.root
-
-    def set_root(self, root):
-        self.root = root
-
-
 class TreeNode(object):
     def __init__(self, data, children):
         self.data = data
@@ -80,6 +43,43 @@ class TreeNode(object):
 
     def set_children(self, children):
         self.children = children
+
+
+class GeneralTree(object):
+    def __init__(
+        self,
+        root: TreeNode,
+        name: str = 'Default Tree'
+    ):
+        self.root = root
+        self.name = name
+
+    def convert_tree_to_arrays(self):
+        arrays = []
+        create_path(self.root, [], 0)
+        print(arrays)
+
+        return arrays
+
+    def print_leaf(self, node):
+        if node:
+            node.print_node()
+
+    def print_tree(self):
+        if self.root:
+            print('')
+            print(self.name)
+            print_character_repeat(len(self.name), '-')
+            print('')
+            self.root.print_node()
+
+        print('')
+
+    def get_root(self):
+        return self.root
+
+    def set_root(self, root):
+        self.root = root
 
 
 def print_character_repeat(num, char = ' '):
