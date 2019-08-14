@@ -9,7 +9,7 @@ class TreeNode(object):
     def add_child(self, obj):
         self.children.append(obj)
 
-    def print_node(self, depth = 0):
+    def print_node(self, depth=0):
         if depth > 0:
             print_character_repeat(depth - 1, '|  ')
             print('|->', end='')
@@ -82,9 +82,9 @@ class GeneralTree(object):
         self.root = root
 
 
-def print_character_repeat(num, char = ' '):
+def print_character_repeat(num, char=' '):
     for i in range(num):
-        print(char, end = '')
+        print(char, end='')
 
 
 def create_path(root, path, path_length):
