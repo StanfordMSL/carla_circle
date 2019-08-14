@@ -1,14 +1,18 @@
 from __future__ import print_function
 
 class GeneralTree(object):
-    def __init__(self, root):
+    def __init__(
+        self,
+        root,
+        name: str = 'Default Tree'
+    ):
         self.root = root
+        self.name = name
 
 
     def convert_tree_to_arrays(self):
         arrays = []
-        print(create_path(self.root, [], 0))
-        # arrays.append(create_path(self.root, [], 0))
+        create_path(self.root, [], 0)
         print(arrays)
 
         return arrays
@@ -21,6 +25,10 @@ class GeneralTree(object):
 
     def print_tree(self):
         if self.root:
+            print('')
+            print(self.name)
+            print_character_repeat(len(self.name), '-')
+            print('')
             self.root.print_node()
 
         print('')
@@ -32,7 +40,7 @@ class GeneralTree(object):
 
     def set_root(self, root):
         self.root = root
-        
+
 
 class TreeNode(object):
     def __init__(self, data, children):
@@ -45,7 +53,10 @@ class TreeNode(object):
 
 
     def print_node(self, depth = 0):
-        print_character_repeat(depth, '- ')
+        if depth > 0:
+            print_character_repeat(depth - 1, '|  ')
+            print('|->', end='')
+            
         print(self.data)
 
         if self.children:
