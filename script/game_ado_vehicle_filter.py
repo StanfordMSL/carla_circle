@@ -89,8 +89,14 @@ class GameAdoCarFilter(object):
             car_yaw = tf.transformations.euler_from_quaternion(quat)[2]
             ori_car = [np.cos(car_yaw), np.sin(car_yaw)]
             ori_circle = [-car_pos[0], -car_pos[1]]
+            ori_circle = ori_circle/np.linalg.norm(ori_circle)
             rel_ang = np.dot(ori_circle, ori_car)
-            if rel_ang <= -0.8 :
+            # print(" this is the position of car", car_pos)
+            # print(" this is yaw angle ", car_yaw)
+            # print(" this is ori car ", ori_car)
+            # print(" this is ori circle ", ori_circle)
+            # print("this is rel ang ", rel_ang)
+            if rel_ang <= -0.3:
                 return False, 0, 0
 
             # then, filter based on position
@@ -99,7 +105,7 @@ class GameAdoCarFilter(object):
             ori_rel = [car_pos[0] - pos_x, car_pos[1] - pos_y]       # relative position of obj w.r.t ego car
             distance_tangent = np.dot(ori_rel, ori_ego)      # distance along the orientation of ego car
             distance_normal = np.dot(ori_rel, [ori_ego[1], -ori_ego[0]])
-            if distance_tangent > -15 and distance_tangent < 40 and abs(distance_normal) < 30:
+            if distance_tangent > -15 and distance_tangent < 25 and abs(distance_normal) < 25:
                 if distance_tangent > 0:
                     return True, 1, np.linalg.norm(ori_rel)
                 else:
@@ -276,7 +282,7 @@ class GameAdoCarFilter(object):
             mk.color = color_rgba
             mk.pose = obj.pose
             mk.id = count
-            mk.lifetime = rospy.Duration(0.05)
+            mk.lifetime = rospy.Duration(1)
             marker_msg.markers.append(mk)
             count += 1
         publisher.publish(marker_msg)

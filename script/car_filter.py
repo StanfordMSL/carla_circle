@@ -47,7 +47,7 @@ class CarFilter:
             mk.color.b = 0
             mk.pose = obj.pose
             mk.id = count
-            mk.lifetime = rospy.Duration(0.05)
+            mk.lifetime = rospy.Duration(1)
             viz_msg.markers.append(mk)
             count += 1
         self.viz_pub.publish(viz_msg)
