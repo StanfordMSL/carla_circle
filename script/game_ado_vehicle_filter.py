@@ -76,6 +76,9 @@ class GameAdoCarFilter(object):
             if dis < 0.1:
                 return False, 0, 0
 
+            if np.linalg.norm(car_pos) <= 5:
+                return False, 0, 0
+
             # first filter based on the orientation of car
             # if going out of a circle, then not relevant
 
@@ -87,7 +90,7 @@ class GameAdoCarFilter(object):
             ori_car = [np.cos(car_yaw), np.sin(car_yaw)]
             ori_circle = [-car_pos[0], -car_pos[1]]
             rel_ang = np.dot(ori_circle, ori_car)
-            if rel_ang <= -0.4:
+            if rel_ang <= -0.8 :
                 return False, 0, 0
 
             # then, filter based on position
@@ -96,7 +99,7 @@ class GameAdoCarFilter(object):
             ori_rel = [car_pos[0] - pos_x, car_pos[1] - pos_y]       # relative position of obj w.r.t ego car
             distance_tangent = np.dot(ori_rel, ori_ego)      # distance along the orientation of ego car
             distance_normal = np.dot(ori_rel, [ori_ego[1], -ori_ego[0]])
-            if distance_tangent > -15 and distance_tangent < 20 and abs(distance_normal) < 20:
+            if distance_tangent > -15 and distance_tangent < 40 and abs(distance_normal) < 30:
                 if distance_tangent > 0:
                     return True, 1, np.linalg.norm(ori_rel)
                 else:
