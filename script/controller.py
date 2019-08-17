@@ -55,7 +55,6 @@ class odom_state(object):
         return self.speed
 
 class AckermannController:
-    MAC_ACCELERATION = 1.0
     def __init__(self):
         rospy.init_node("controller", anonymous=True)
 
@@ -121,8 +120,8 @@ class AckermannController:
                 target_pt = self.path_tree.data[idx + 2, :]
                 target_vel = self.vel_path[idx + 2, :]
             else:
-                target_pt = self.path_tree.data[1, :]
-                target_vel = self.vel_path[1, :]
+                target_pt = self.path_tree.data[-1, :]
+                target_vel = self.vel_path[-1, :]
                 # print("at the end of the desired waypoits!!!")
 
             target_speed = np.linalg.norm(target_vel)
@@ -130,7 +129,7 @@ class AckermannController:
             steer = self.compute_ackermann_cmd(target_pt)
             cmd_msg.steering_angle = steer
             cmd_msg.speed = target_speed
-            if self.state.get_speed() - target_speed > 1.0:
+            if self.state.get_speed() - target_speed > 0.0:
                 cmd_msg.acceleration = (target_speed - self.state.get_speed()) / (self.time_step * 2)
             elif target_speed - self.state.get_speed() > 1.0:
                 cmd_msg.acceleration = np.min([3, (target_speed - self.state.get_speed()) / (self.time_step * 2)])
@@ -142,7 +141,7 @@ class AckermannController:
         pos_x, pos_y, yaw = self.state.get_pose()
         if np.linalg.norm([target_pt[0] - pos_x, target_pt[1] - pos_y]) < 1:
             print("target point too close!!!!!!!!")
-            return 0.2
+            return 0.0
 
         egoOri = np.array([np.cos(yaw), np.sin(yaw), 0])
         rel_pos = np.array([target_pt[0] - pos_x, target_pt[1] - pos_y, 0])
