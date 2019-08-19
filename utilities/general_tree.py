@@ -2,7 +2,7 @@ from __future__ import print_function
 
 
 class TreeNode(object):
-    def __init__(self, data, children):
+    def __init__(self, data=None, children=[]):
         self.data = data
         self.children = children
 
@@ -56,7 +56,7 @@ class GeneralTree(object):
 
     def convert_tree_to_arrays(self):
         arrays = []
-        find_all_paths_with_tree(self.root, arrays)
+        find_all_paths_within_tree(self.root, arrays)
 
         return arrays
 
@@ -86,7 +86,7 @@ def print_character_repeat(num, char=' '):
         print(char, end='')
 
 
-def find_all_paths_with_tree(root, paths=[], path=[], path_length=0):
+def find_all_paths_within_tree(root, paths=[], path=[], path_length=0):
     if root is None:
         return
 
@@ -99,6 +99,6 @@ def find_all_paths_with_tree(root, paths=[], path=[], path_length=0):
 
     if root.has_children():
         for i, child in enumerate(root.get_children()):
-            find_all_paths_with_tree(child, paths, path, path_length)
+            find_all_paths_within_tree(child, paths, path, path_length)
     else:
         paths.append(path.copy())
