@@ -1,5 +1,6 @@
 from utilities import general_tree
 
+
 def main():
     way1 = general_tree.TreeNode('1', [])
     way2 = general_tree.TreeNode('2', [])
@@ -73,12 +74,10 @@ def main():
 
     # Create a tree from the map
     root = way1
-    tree = general_tree.GeneralTree(root)
+    tree = general_tree.GeneralTree(root, 'Test Tree')
     tree.print_tree()
 
     tree.convert_tree_to_arrays()
 
-
-# if __name__ == "__main__":
-#     main()
+# Run the test
 main()
