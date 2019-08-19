@@ -31,9 +31,29 @@ class DesiredWaypointsVisualization:
         mk.scale.y = 1.3
         mk.scale.z = 1.3
         mk.color.a = 1.0
-        mk.color.b = 1
+        mk.color.g = 1
         for pt in msg.points:
             mk.points.append(Point(pt.transforms[0].translation.x, pt.transforms[0].translation.y, 0))
+        self.waypoints_pub.publish(mk)
+
+
+class PredictWaypointsVisualization:
+    def __init__(self):
+        rospy.Subscriber("/MSLcar0/player0/opp_path", Path, self.des_traj_cb)
+        self.waypoints_pub = rospy.Publisher("/carla/viz/pre_waypoints", Marker, queue_size=10)
+
+    def des_traj_cb(self, msg):
+        mk = Marker()
+        mk.header.stamp = rospy.Time.now()
+        mk.header.frame_id = "map"
+        mk.type = Marker.CUBE_LIST
+        mk.scale.x = 1.3
+        mk.scale.y = 1.3
+        mk.scale.z = 1.3
+        mk.color.a = 1.0
+        mk.color.r = 1
+        for pt in msg.poses:
+            mk.points.append(Point(pt.pose.position.x, pt.pose.position.y, 0))
         self.waypoints_pub.publish(mk)
 
 

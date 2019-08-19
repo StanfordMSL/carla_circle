@@ -5,8 +5,6 @@
 	<!-- <node name="odom_pub_node" pkg="carla_circle" type="odom_talker.py" output="screen" /> -->
 
 	<arg name="time_step" default="0.5" />
-	<arg name="horizon" default="5" />
-	<arg name="reference_speed" default="5.5" />
 
 	<!-- start service call for game node  -->
 	<node name="restart_call" pkg="carla_circle" type="game_start_client.py" output="screen" />
@@ -27,8 +25,8 @@
 	<node name="controller" pkg="carla_circle" type="controller.py" output="screen">
 		<param name="time_step" value="$(arg time_step)" />
 		<param name="ctrl_freq" value="100" />
-		<param name="str_prop" value="0.6" />
-		<param name="plan_steps" value="30" />
+		<param name="str_prop" value="0.5" />
+		<param name="plan_steps" value="10" />
 	</node>
 
 	<!-- visualization -->

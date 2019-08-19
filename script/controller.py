@@ -4,7 +4,6 @@
 """
 given desired waypoints, this ros node sends the ackermann steering command for
 the ego vehicle to follow the trajectory
-TODO: send acceleration instead of speed directly
 """
 
 import rospy
@@ -13,6 +12,7 @@ from nav_msgs.msg import Odometry
 from trajectory_msgs.msg import MultiDOFJointTrajectory
 from ackermann_msgs.msg import AckermannDrive
 
+from carla_ros_bridge_msgs.msg import CarlaEgoVehicleControl
 from scipy.spatial import KDTree
 import numpy as np
 import timeit
@@ -78,9 +78,9 @@ class AckermannController:
 
         # subscribers, publishers
         rospy.Subscriber("/MSLcar0/ground_truth/odometry", Odometry, self.odom_cb)
-        # rospy.Subscriber("/carla/ego_vehicle/desired_waypoints", MultiDOFJointTrajectory, self.desired_waypoints_cb)
         rospy.Subscriber("/MSLcar0/command/trajectory", MultiDOFJointTrajectory, self.desired_waypoints_cb)
         self.command_pub = rospy.Publisher("/carla/ego_vehicle/ackermann_cmd", AckermannDrive, queue_size=10)
+        self.vehicle_cmd_pub = rospy.Publisher("/carla/ego_vehicle/vehicle_control_cmd", CarlaEgoVehicleControl, queue_size=10)
         self.ctrl_timer = rospy.Timer(rospy.Duration(1.0/ctrl_freq), self.timer_cb)
 
     def desired_waypoints_cb(self, msg):
@@ -111,6 +111,16 @@ class AckermannController:
         cmd_msg.acceleration = 0
         cmd_msg.jerk = 0
 
+
+        vehicle_cmd_msg = CarlaEgoVehicleControl()
+        vehicle_cmd_msg.header.stamp = rospy.Time.now()
+        vehicle_cmd_msg.header.frame_id = "map"
+        vehicle_cmd_msg.throttle = 0
+        vehicle_cmd_msg.steer = 0
+        vehicle_cmd_msg.brake = 0
+        vehicle_cmd_msg.hand_brake = 0
+        vehicle_cmd_msg.reverse = 0
+
         if self.pathReady and self.stateReady:
             pos_x, pos_y = self.state.get_position()
 
@@ -122,20 +132,48 @@ class AckermannController:
             else:
                 target_pt = self.path_tree.data[-1, :]
                 target_vel = self.vel_path[-1, :]
-                # print("at the end of the desired waypoits!!!")
+                print("CONTROLLER: at the end of the desired waypoits!!!")
 
             target_speed = np.linalg.norm(target_vel)
 
+
+            # set control values for ackermann_cmd
             steer = self.compute_ackermann_cmd(target_pt)
             cmd_msg.steering_angle = steer
             cmd_msg.speed = target_speed
             if self.state.get_speed() - target_speed > 0.0:
-                cmd_msg.acceleration = (target_speed - self.state.get_speed()) / (self.time_step * 2)
-            elif target_speed - self.state.get_speed() > 1.0:
+                cmd_msg.acceleration = (target_speed - self.state.get_speed()) / (self.time_step * 2) - 3
+            elif target_speed - self.state.get_speed() > 0.2:
                 cmd_msg.acceleration = np.min([3, (target_speed - self.state.get_speed()) / (self.time_step * 2)])
             else:
                 cmd_msg.acceleration = 0
+
+            # control values for CarlaEgoVehicleControl
+            vehicle_cmd_msg.steer = -steer
+            print("target %2.2f"% target_speed, " ego %2.2f"%self.state.get_speed())
+            if self.state.get_speed() - target_speed > 1.0:
+                # print(" in braking mode ")
+                vehicle_cmd_msg.throttle = 0
+                vehicle_cmd_msg.brake = 1
+            elif self.state.get_speed() - target_speed > 0.0:
+                # print(" in less throttle mode ")
+                vehicle_cmd_msg.throttle = 0.57 +  (target_speed - self.state.get_speed()) * 1
+            elif target_speed - self.state.get_speed() > 0.2:
+                # print(" in acceleration  mode ")
+                vehicle_cmd_msg.throttle = np.clip(0.57 + (target_speed - self.state.get_speed()) * 0.3, 0, 1)
+            else:
+                # print(" apply forward base throttlr")
+                vehicle_cmd_msg.throttle = 0.57
+
+        # self.vehicle_cmd_pub.publish(vehicle_cmd_msg)
         self.command_pub.publish(cmd_msg)
+
+
+
+
+
+
+
 
     def compute_ackermann_cmd(self, target_pt):
         pos_x, pos_y, yaw = self.state.get_pose()
