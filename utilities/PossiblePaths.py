@@ -99,28 +99,24 @@ def add_to_path(
     else:
         path.append(waypoint)
 
-        if verbose:
-            print_waypoint_info(waypoint)
-            print("Path so far:", path)
-
     path_length = path_length + 1
 
-    if len(path) < length:
+    if path_length < length:
         next_waypoints = waypoint.next(dist)
-        for i, wp in enumerate(next_waypoints):
+        for wp in next_waypoints:
             add_to_path(wp, paths, path, path_length, dist, length, verbose)
     else:
-        paths.append(path)
-        
+        paths.append(path.copy())
+
         if verbose:
             print(path)
 
 
-def draw_paths(paths, world):
+def draw_paths(paths, world, timeout=1.0):
     colors = [x.value for x in Colors]
 
     for x, path in enumerate(paths, start=1):
-        draw_waypoints(world, path, 0.1*x, colors[x-1])
+        draw_waypoints(world, path, 0.2*x, colors[x-1], timeout)
 
 
 def draw_waypoints(
@@ -128,7 +124,7 @@ def draw_waypoints(
     waypoints,
     z=0.5,
     color=carla.Color(255,0,0),
-    timeout=5.0
+    timeout=1.0
 ):
     """
     Draw a list of waypoints at a certain height given in z.
