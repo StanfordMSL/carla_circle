@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # author: mingyuw@stanford.edu
-# this node filters nearby vehicles based on distance
+
+
+# this node filters out vehicles close to the roundabout
 
 import rospy
 from derived_object_msgs.msg import ObjectArray
@@ -18,7 +20,6 @@ class CarFilter:
         self.viz_pub = rospy.Publisher("/carla/viz/nearby_markers", MarkerArray, queue_size=10)
 
     def allcar_cb(self, objectarray_msg):
-        start = timeit.default_timer()
         def valid_car(object):
             pos_x = object.pose.position.x
             pos_y = object.pose.position.y
@@ -28,7 +29,6 @@ class CarFilter:
         msg = ObjectArray()
         msg.header = objectarray_msg.header
         msg.objects = [obj for obj in objectarray_msg.objects if valid_car(obj)]
-        end = timeit.default_timer()
         self.filter_pub.publish(msg)
 
 
@@ -42,9 +42,12 @@ class CarFilter:
             mk.scale.y = 1.6
             mk.scale.z = 0.5
             mk.color.a = 1
+            mk.color.r = 255
+            mk.color.g = 255
+            mk.color.b = 0
             mk.pose = obj.pose
             mk.id = count
-            mk.lifetime = rospy.Duration(0.05)
+            mk.lifetime = rospy.Duration(1)
             viz_msg.markers.append(mk)
             count += 1
         self.viz_pub.publish(viz_msg)

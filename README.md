@@ -1,31 +1,24 @@
 # carla_circle
 
 
-workspace for ros and scripts to work with Carla
-
-
+workspace for ros and scripts to work with Carla Event 4
 
 
 
 ### carla version / carla ros version
-0.9.2
+0.9.5
 
 
 
-### run simulation
-follow the instructions on https://github.com/carla-simulator/ros-bridge/tree/0.9.2 to install required packages
 
-##### in CARLA folder
-./CarlaUE4.sh  -carla-server -windowed -ResX=320 -ResY=240   __to start a carla server __
+### to run simulation
+./CarlaUE4.sh  -carla-server -windowed -ResX=640 -ResY=480
+python3 manual_control.py __from carla_circle package to launch ego_vehicle__  
+python3 Event4.py     __from TRI-Carla-Challenges folder__  
 
+roslaunch carla_ros_bridge carla_ros_bridge.launch    __for ros bridge__  
+roslaunch carla_ackermann_control  carla_ackermann_control.launch      __for controlling ego car with ackermann message__  
 
-##### in ros carla_circle folder
-python spawn_npc.modified.py
-python manual_control.py
-
-
-
-##### to run simulation
-roslaunch carla_ros_bridge client_with_rviz.launch     __for bridge and visualization__
-
-roslaunch carla_circle main_sim.launch    __for control planning layers __
+roslaunch carla_circle main_game.launch file __for main control and visualization__  
+roslaunch uavgame main_mpc_gurobi.launch    __for trajectory planner__  
+(still need rosrun uavgame osprey_start.py to kick off the simulation - update: relocated to main_game.launch in carla_circle package to call the restart service)

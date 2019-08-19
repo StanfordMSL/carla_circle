@@ -1,8 +1,16 @@
 #!/usr/bin/env python
+# author: mingyuw@stanford.edu
+
+# includes all the class need for rviz visualization, note that the RoadGeometryVisualization
+# is deprecated. should use the viz_road_network script for road visualization
+# maybe combine them together???
+
+
 import rospy
-from visualization_msgs.msg import Marker
+import tf
+from visualization_msgs.msg import Marker, MarkerArray
 from geometry_msgs.msg import Point
-from nav_msgs.msg import Odometry
+from nav_msgs.msg import Odometry, Path
 from sensor_msgs.msg import MultiDOFJointState
 from trajectory_msgs.msg import MultiDOFJointTrajectory
 
@@ -11,7 +19,7 @@ import numpy as np
 
 class DesiredWaypointsVisualization:
     def __init__(self):
-        rospy.Subscriber("/carla/ego_vehicle/desired_waypoints", MultiDOFJointTrajectory, self.des_traj_cb)
+        rospy.Subscriber("/MSLcar0/command/trajectory", MultiDOFJointTrajectory, self.des_traj_cb)
         self.waypoints_pub = rospy.Publisher("/carla/viz/des_waypoints", Marker, queue_size=10)
 
     def des_traj_cb(self, msg):
@@ -19,14 +27,135 @@ class DesiredWaypointsVisualization:
         mk.header.stamp = rospy.Time.now()
         mk.header.frame_id = "map"
         mk.type = Marker.CUBE_LIST
-        mk.scale.x = 1
-        mk.scale.y = 1
-        mk.scale.z = 1
+        mk.scale.x = 1.3
+        mk.scale.y = 1.3
+        mk.scale.z = 1.3
         mk.color.a = 1.0
-        mk.color.b = 1
+        mk.color.g = 1
         for pt in msg.points:
             mk.points.append(Point(pt.transforms[0].translation.x, pt.transforms[0].translation.y, 0))
         self.waypoints_pub.publish(mk)
+
+
+class PredictWaypointsVisualization:
+    def __init__(self):
+        rospy.Subscriber("/MSLcar0/player0/opp_path", Path, self.des_traj_cb)
+        self.waypoints_pub = rospy.Publisher("/carla/viz/pre_waypoints", Marker, queue_size=10)
+
+    def des_traj_cb(self, msg):
+        mk = Marker()
+        mk.header.stamp = rospy.Time.now()
+        mk.header.frame_id = "map"
+        mk.type = Marker.CUBE_LIST
+        mk.scale.x = 1.3
+        mk.scale.y = 1.3
+        mk.scale.z = 1.3
+        mk.color.a = 1.0
+        mk.color.r = 1
+        for pt in msg.poses:
+            mk.points.append(Point(pt.pose.position.x, pt.pose.position.y, 0))
+        self.waypoints_pub.publish(mk)
+
+
+
+class egoTrackVisualizer(object):
+    def __init__(self):
+        rospy.Subscriber("/MSLcar0/mpc/ego_track_information", Path, self.ego_track_cb)
+        self.area_pub = rospy.Publisher("/carla/viz/ego_track", MarkerArray, queue_size=10)
+
+    def ego_track_cb(self, msg):
+        mk_ar = MarkerArray()
+        for i in range(len(msg.poses)-2):
+            pos_x = msg.poses[i].pose.position.x
+            pos_y = msg.poses[i].pose.position.y
+            pos_x_n = msg.poses[i+1].pose.position.x
+            pos_y_n = msg.poses[i+1].pose.position.y
+            yaw = np.arctan2(pos_y_n - pos_y, pos_x_n - pos_x)
+
+            mk = Marker()
+            mk.id = i
+            mk.header.stamp = rospy.Time.now()
+            mk.header.frame_id = "map"
+            mk.type = Marker.CUBE
+            mk.scale.x = 4
+            mk.scale.y = msg.poses[-1].pose.position.x * 2
+            mk.scale.z = 1.3
+            mk.color.a = 0.2
+            mk.color.g = 255
+            mk.pose.position.x = pos_x
+            mk.pose.position.y = pos_y
+            quat = tf.transformations.quaternion_from_euler(0, 0, yaw)
+            mk.pose.orientation.x = quat[0]
+            mk.pose.orientation.y = quat[1]
+            mk.pose.orientation.z = quat[2]
+            mk.pose.orientation.w = quat[3]
+            mk_ar.markers.append(mk)
+
+        self.area_pub.publish(mk_ar)
+
+
+class oppTrackVisualizer(object):
+    def __init__(self):
+        rospy.Subscriber("/MSLcar0/mpc/ado_track_information", Path, self.track_cb)
+        self.area_pub = rospy.Publisher("/carla/viz/opp_track", MarkerArray, queue_size=10)
+
+    def track_cb(self, msg):
+        mk_ar = MarkerArray()
+        for i in range(len(msg.poses)-2):
+            pos_x = msg.poses[i].pose.position.x
+            pos_y = msg.poses[i].pose.position.y
+            if pos_y >= 60:
+                # this is for not visualizing the track for "fake" vehicle
+                return
+            pos_x_n = msg.poses[i+1].pose.position.x
+            pos_y_n = msg.poses[i+1].pose.position.y
+            yaw = np.arctan2(pos_y_n - pos_y, pos_x_n - pos_x)
+
+            mk = Marker()
+            mk.id = i
+            mk.header.stamp = rospy.Time.now()
+            mk.header.frame_id = "map"
+            mk.type = Marker.CUBE
+            mk.scale.x = 4
+            mk.scale.y = msg.poses[-1].pose.position.x * 2
+            mk.scale.z = 1.3
+            mk.color.a = 0.2
+            mk.color.r = 255
+            mk.pose.position.x = pos_x
+            mk.pose.position.y = pos_y
+            quat = tf.transformations.quaternion_from_euler(0, 0, yaw)
+            mk.pose.orientation.x = quat[0]
+            mk.pose.orientation.y = quat[1]
+            mk.pose.orientation.z = quat[2]
+            mk.pose.orientation.w = quat[3]
+            mk.lifetime = rospy.Duration(1)
+            mk_ar.markers.append(mk)
+
+        self.area_pub.publish(mk_ar)
+
+
+
+class RoadNetworkVisualization(object):
+    def __init__(self):
+        self.road_topo_pub = rospy.Publisher("/carla/viz/road_topo", Marker, queue_size=10)
+        self.timer = rospy.Timer(rospy.Duration(5), self.timer_cb)
+        self.road_topo = [[-2.74, -19.43, -26.26, -7.96], [-14.31, -13.7, -19.69, -4.97], [-16.79, -16.18, -23.05, -5.94], [-12.61, -15.27, -14.31, -13.7], [-14.81, -17.99, -16.79, -16.18], [-2.74, -19.43, -12.61, -15.27], [-3.15, -22.91, -14.81, -17.99], [-8.4, -26.79, -14.81, -17.99], [-14.81, -17.99, -16.79, -16.18], [-16.79, -16.18, -26.26, -7.96], [19.42, 12.53, 19.44, 12.51], [16.47, 10.65, 16.48, 10.64], [19.44, 12.51, 21.85, 7.35], [16.48, 10.64, 18.52, 6.27], [21.85, 7.35, 22.91, 1.72], [18.52, 6.27, 19.41, 1.51], [1.71, 23.72, 8.07, 22.15], [1.37, 20.23, 6.75, 18.9], [8.07, 22.15, 13.71, 18.83], [6.75, 18.9, 11.52, 16.1], [13.71, 18.83, 13.72, 18.82], [11.52, 16.1, 11.53, 16.09], [44.65, -7.81, 43.65, -7.83], [44.6, -4.31, 43.6, -4.33], [43.65, -7.83, 42.65, -7.84], [43.6, -4.33, 42.6, -4.34], [43.48, 3.67, 44.48, 3.68], [43.42, 7.17, 44.42, 7.18], [42.48, 3.65, 43.48, 3.67], [42.42, 7.15, 43.42, 7.17], [14.19, -12.82, 6.32, -25.3], [16.73, -15.22, 9.64, -26.38], [15.33, -11.5, 14.19, -12.82], [18.08, -13.67, 16.73, -15.22], [19.3, -1.96, 15.33, -11.5], [22.78, -2.38, 18.08, -13.67], [25.89, -8.32, 18.08, -13.67], [25.34, -4.86, 15.33, -11.5], [18.08, -13.67, 16.73, -15.22], [15.33, -11.5, 14.19, -12.82], [16.73, -15.22, 9.64, -26.38], [14.19, -12.82, 6.32, -25.3], [25.89, -8.32, 18.08, -13.67], [25.34, -4.86, 15.33, -11.5], [18.08, -13.67, 16.73, -15.22], [15.33, -11.5, 14.19, -12.82], [16.73, -15.22, 4.2, -22.57], [14.19, -12.82, 3.48, -19.15], [-8.4, -26.79, -14.81, -17.99], [-5.07, -25.7, -12.61, -15.27], [-14.81, -17.99, -16.79, -16.18], [-12.61, -15.27, -14.31, -13.7], [-16.79, -16.18, -23.05, -5.94], [-14.31, -13.7, -19.69, -4.97], [-67.31, -2.96, -67.34, -2.96], [-67.36, 0.54, -67.32, 0.54], [-67.31, -2.96, -67.34, -2.96], [-74.31, 21.49, -74.31, 18.95], [-74.31, 18.95, -74.33, 13.87], [-74.33, 13.87, -74.33, 11.33], [-74.33, 11.33, -67.32, 0.54], [-74.39, -8.12, -74.39, -8.15], [-74.39, -8.06, -74.39, -8.12], [-74.39, -8.02, -74.39, -8.06], [-67.34, -2.96, -74.39, -8.02], [-67.31, -2.96, -67.34, -2.96], [-42.35, -2.84, -67.31, -2.96], [-42.35, -2.84, -67.31, -2.96], [-42.35, -2.84, -67.31, -2.96], [-42.35, -2.84, -67.31, -2.96], [-67.32, 0.54, -42.37, 0.66], [-6.39, -44.17, -6.42, -43.18], [-2.89, -44.09, -2.92, -43.09], [-6.42, -43.18, -6.45, -42.19], [-2.92, -43.09, -2.95, -42.07], [7.56, -41.86, 7.58, -42.83], [4.06, -41.89, 4.08, -42.92], [7.58, -42.83, 7.6, -43.83], [4.08, -42.92, 4.1, -43.92], [25.68, 4.02, 42.48, 3.65], [26.51, 7.43, 42.42, 7.15], [-23.05, -5.94, -23.95, 0.38], [-19.69, -4.97, -20.45, 0.38], [-0.5, -23.07, -3.15, -22.91], [-0.5, -23.07, -3.15, -22.91], [-0.5, -19.57, -2.74, -19.43], [-0.5, -19.57, -2.74, -19.43], [4.2, -22.57, -0.5, -23.07], [3.48, -19.15, -0.5, -19.57], [22.95, 0.38, 22.78, -2.38], [22.95, 0.38, 22.78, -2.38], [19.45, 0.38, 19.3, -1.96], [19.45, 0.38, 19.3, -1.96], [42.6, -4.34, 25.34, -4.86], [42.6, -4.34, 25.34, -4.86], [42.65, -7.84, 25.89, -8.32], [42.65, -7.84, 25.89, -8.32], [-21.25, 11.11, -17.09, 16.64], [-21.25, 11.11, -17.09, 16.64], [-18.17, 9.45, -14.61, 14.17], [-18.17, 9.45, -14.61, 14.17], [-21.25, 11.11, -21.25, 11.11], [-18.17, 9.45, -18.17, 9.45], [-17.09, 16.64, -17.09, 16.64], [-14.61, 14.17, -14.61, 14.17], [-17.09, 16.64, -11.86, 20.78], [-14.61, 14.17, -10.11, 17.75], [-11.86, 20.78, -5.61, 23.24], [-10.11, 17.75, -4.83, 19.83], [-23.95, 0.38, -23.87, 2.26], [-20.45, 0.38, -20.38, 1.97], [22.91, 1.72, 22.95, 0.38], [19.41, 1.51, 19.45, 0.38], [13.72, 18.82, 19.42, 12.53], [13.72, 18.82, 19.42, 12.53], [11.53, 16.09, 16.47, 10.65], [11.53, 16.09, 16.47, 10.65], [-27.05, 3.91, -21.25, 11.11], [-0.5, 23.83, 1.71, 23.72], [-0.5, 20.33, 1.37, 20.23], [71.36, -7.41, 44.65, -7.81], [71.31, -3.92, 44.6, -4.31], [44.48, 3.68, 71.19, 4.08], [44.42, 7.18, 71.14, 7.58], [-3.15, -22.91, -14.81, -17.99], [-14.81, -17.99, -16.79, -16.18], [-16.79, -16.18, -26.26, -7.96], [-23.87, 2.26, -23.01, 6.81], [-20.38, 1.97, -19.66, 5.82], [-23.01, 6.81, -21.25, 11.11], [-19.66, 5.82, -18.17, 9.45], [6.32, -25.3, 4.06, -41.89], [9.64, -26.38, 7.56, -41.86], [-17.09, 16.64, -17.08, 16.64], [-14.61, 14.17, -14.61, 14.17], [-17.08, 16.64, -11.75, 26.6], [-14.61, 14.17, -8.32, 25.91], [-8.32, 25.91, -6.59, 40.58], [-11.75, 26.6, -10.09, 40.65], [-5.61, 23.24, -0.5, 23.83], [-4.83, 19.83, -0.5, 20.33], [-42.37, 0.66, -41.37, 0.67], [-41.37, 0.67, -40.41, 0.69], [-41.35, -2.83, -42.35, -2.84], [-40.35, -2.82, -41.35, -2.83], [-6.45, -42.19, -8.4, -26.79], [-6.45, -42.19, -8.4, -26.79], [-2.95, -42.07, -5.07, -25.7], [-26.26, -7.96, -40.35, -2.82], [14.19, -12.82, 3.48, -19.15], [16.73, -15.22, 4.2, -22.57], [15.33, -11.5, 14.19, -12.82], [18.08, -13.67, 16.73, -15.22], [19.3, -1.96, 15.33, -11.5], [22.78, -2.38, 18.08, -13.67], [-10.09, 40.65, -10.08, 41.63], [-6.59, 40.58, -6.58, 41.61], [-10.08, 41.63, -10.07, 42.63], [-6.58, 41.61, -6.57, 42.61], [4.93, 40.58, 7.33, 27.86], [1.43, 40.51, 4.03, 26.7], [4.93, 42.53, 4.92, 41.53], [1.43, 42.56, 1.42, 41.56], [4.92, 41.53, 4.93, 40.58], [1.42, 41.56, 1.43, 40.51], [11.52, 16.1, 11.53, 16.09], [13.71, 18.83, 13.72, 18.82], [4.03, 26.7, 11.52, 16.1], [7.33, 27.86, 13.71, 18.83], [-77.89, -8.11, -77.89, -8.14], [-74.39, -8.12, -74.39, -8.15], [-77.89, -8.05, -77.89, -8.11], [-74.39, -8.06, -74.39, -8.12], [-77.89, -8.01, -77.89, -8.05], [-74.39, -8.02, -74.39, -8.06], [-77.83, 11.34, -77.89, -8.01], [-74.33, 11.33, -74.39, -8.02], [-77.83, 13.88, -77.83, 11.34], [-74.33, 13.87, -74.33, 11.33], [-74.31, 18.95, -74.33, 13.87], [-74.31, 21.49, -74.31, 18.95], [-40.41, 0.69, -27.05, 3.91], [78.88, -3.8, 71.31, -3.92], [78.92, -3.8, 78.88, -3.8], [19.42, 12.53, 19.44, 12.51], [16.47, 10.65, 16.48, 10.64], [19.44, 12.51, 26.51, 7.43], [16.48, 10.64, 25.68, 4.02], [71.14, 7.58, 78.71, 7.7], [71.19, 4.08, 78.76, 4.2], [78.71, 7.7, 78.75, 7.7], [78.76, 4.2, 78.8, 4.2], [-77.89, -8.11, -77.89, -8.14], [-77.89, -8.05, -77.89, -8.11], [-67.31, -2.96, -67.34, -2.96], [77.38, -11.67, 71.36, -7.41]]
+    def timer_cb(self, event):
+        mk = Marker()
+        mk.header.stamp = rospy.Time.now()
+        mk.header.frame_id = "map"
+        mk.type = Marker.LINE_LIST
+        mk.scale.x = 0.4
+        mk.color.a = 1
+        mk.color.r = 0
+        mk.color.b = 0
+        mk.color.g = 0
+        for i in range(len(self.road_topo)):
+            mk.points.append(Point(self.road_topo[i][0], -self.road_topo[i][1], 0))
+            mk.points.append(Point(self.road_topo[i][2], -self.road_topo[i][3], 0))
+        self.road_topo_pub.publish(mk)
+
+
 
 class RoadGeometryVisualization(object):
     def __init__(self):
@@ -289,6 +418,9 @@ class RoadGeometryVisualization(object):
         mk.scale.y = 0.4
         mk.scale.z = 0.4
         mk.color.a = 1
+        mk.color.r = 0
+        mk.color.b = 1
+        mk.color.g = 0
         for i in range(self.road.shape[0]):
             mk.points.append(Point(self.road[i,0], self.road[i,1], 0))
         self.road_waypoint_pub.publish(mk)
