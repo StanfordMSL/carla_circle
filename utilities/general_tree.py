@@ -56,8 +56,7 @@ class GeneralTree(object):
 
     def convert_tree_to_arrays(self):
         arrays = []
-        create_path(self.root, [], 0)
-        print(arrays)
+        find_all_paths_with_tree(self.root, arrays)
 
         return arrays
 
@@ -87,7 +86,7 @@ def print_character_repeat(num, char=' '):
         print(char, end='')
 
 
-def create_path(root, path, path_length):
+def find_all_paths_with_tree(root, paths=[], path=[], path_length=0):
     if root is None:
         return
 
@@ -99,8 +98,7 @@ def create_path(root, path, path_length):
     path_length = path_length + 1
 
     if root.has_children():
-        for child in root.get_children():
-            create_path(child, path, path_length)
+        for i, child in enumerate(root.get_children()):
+            find_all_paths_with_tree(child, paths, path, path_length)
     else:
-        print(path)
-        return path
+        paths.append(path.copy())
