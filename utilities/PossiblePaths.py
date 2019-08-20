@@ -18,7 +18,7 @@ class PossiblePaths(object):
     def __init__(
         self,
         vehicle: carla.Actor,
-        dist:float = 0.2,
+        dist: float = 0.2,
         path_length: int = 10
     ):
         self.m_vehicle = vehicle
@@ -33,7 +33,6 @@ class PossiblePaths(object):
     def compute_available_paths(self):
         self.m_paths = compute_all_paths_for_actor(
             self.m_vehicle,
-            self.m_map,
             self.m_dist,
             self.m_path_length
         )
@@ -44,11 +43,15 @@ def compute_all_paths_from_location(
     carla_world: carla.World,
     dist_between_waypoints: float,
     path_length: int = 10,
+    lane_type: carla.LaneType = carla.LaneType.Driving,
     verbose: bool = False
 ):
     paths = []
-    path_start = carla_world.get_map().get_waypoint(location)
-    
+    path_start = carla_world.get_map().get_waypoint(
+        location,
+        lane_type=lane_type
+    )
+
     if verbose:
         print("Path start - ")
         print_waypoint_info(path_start)
@@ -70,6 +73,7 @@ def compute_all_paths_for_actor(
     vehicle: carla.Actor,
     dist_between_waypoints: float,
     path_length: int = 10,
+    lane_type: carla.LaneType = carla.LaneType.Driving,
     verbose: bool = False
 ):
     world = vehicle.get_world()
@@ -79,6 +83,7 @@ def compute_all_paths_for_actor(
         world,
         dist_between_waypoints,
         path_length,
+        lane_type,
         verbose
     )
 
