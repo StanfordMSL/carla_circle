@@ -4,12 +4,13 @@ from enum import Enum
 import math
 import matplotlib.pyplot as plt
 
+
 class PossiblePaths(object):
     '''
     PossiblePaths enables the user to calculate and display all available
     paths a Carla vehicle can take from its given location based on the
     legal driving maneuvers.
-    
+
     Parameters
     ----------
     object : [type]
@@ -29,7 +30,7 @@ class PossiblePaths(object):
 
     def draw(self):
         draw_paths(self.m_paths)
-    
+
     def compute_available_paths(self):
         self.m_paths = compute_all_paths_for_actor(
             self.m_vehicle,
@@ -128,7 +129,7 @@ def draw_waypoints(
     world,
     waypoints,
     z=0.5,
-    color=carla.Color(255,0,0),
+    color=carla.Color(255, 0, 0),
     timeout=1.0
 ):
     """
