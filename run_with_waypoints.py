@@ -672,7 +672,7 @@ def game_loop(args):
                     world.vehicle,
                     3.0,
                     10,
-                    False
+                    verbose=False
                 )
 
             count += 1
