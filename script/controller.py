@@ -62,6 +62,7 @@ class AckermannController:
         self.time_step = rospy.get_param("~time_step")
         self.traj_steps = rospy.get_param("~plan_steps")
         ctrl_freq = rospy.get_param("~ctrl_freq")
+        rolename = rospy.get_param("~rolename")
 
         # state information
         self.stateReady = False
@@ -77,10 +78,10 @@ class AckermannController:
         self.pid_str_prop = rospy.get_param("~str_prop")
 
         # subscribers, publishers
-        rospy.Subscriber("/MSLcar0/ground_truth/odometry", Odometry, self.odom_cb)
-        rospy.Subscriber("/MSLcar0/command/trajectory", MultiDOFJointTrajectory, self.desired_waypoints_cb)
-        self.command_pub = rospy.Publisher("/carla/ego_vehicle/ackermann_cmd", AckermannDrive, queue_size=10)
-        self.vehicle_cmd_pub = rospy.Publisher("/carla/ego_vehicle/vehicle_control_cmd", CarlaEgoVehicleControl, queue_size=10)
+        rospy.Subscriber("MSLcar0/ground_truth/odometry", Odometry, self.odom_cb)
+        rospy.Subscriber("MSLcar0/command/trajectory", MultiDOFJointTrajectory, self.desired_waypoints_cb)
+        self.command_pub = rospy.Publisher("/carla/" + rolename + "/ackermann_cmd", AckermannDrive, queue_size=10)
+        self.vehicle_cmd_pub = rospy.Publisher("/carla/" + rolename + "/vehicle_control_cmd", CarlaEgoVehicleControl, queue_size=10)
         self.ctrl_timer = rospy.Timer(rospy.Duration(1.0/ctrl_freq), self.timer_cb)
 
     def desired_waypoints_cb(self, msg):
@@ -150,7 +151,7 @@ class AckermannController:
 
             # control values for CarlaEgoVehicleControl
             vehicle_cmd_msg.steer = -steer
-            print("target %2.2f"% target_speed, " ego %2.2f"%self.state.get_speed())
+            # print("target %2.2f"% target_speed, " ego %2.2f"%self.state.get_speed())
             if self.state.get_speed() - target_speed > 1.0:
                 # print(" in braking mode ")
                 vehicle_cmd_msg.throttle = 0

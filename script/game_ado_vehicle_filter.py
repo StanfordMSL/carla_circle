@@ -34,11 +34,12 @@ class GameAdoCarFilter(object):
         self.enable_lane_filter = True     # if true, then only vehicles entering in the inner lane
                                            # will be considered
 
+        rolename = rospy.get_param("~rolename")
         # -----------------
         # subscriber, publisher and timer
         # -------------------
         rospy.Subscriber("/carla/nearby_obj", ObjectArray, self.nearby_car_cb)
-        rospy.Subscriber("/carla/ego_vehicle/odometry", Odometry, self.ego_vehicle_cb)
+        rospy.Subscriber("/carla/" + rolename + "/odometry", Odometry, self.ego_vehicle_cb)
         # publisher for relevant cars
         self.relevant_pub = rospy.Publisher("/carla/relevant_obj", ObjectArray, queue_size=10)
         self.marker_pub = rospy.Publisher("/carla/viz/relevant_obj", MarkerArray, queue_size=10)

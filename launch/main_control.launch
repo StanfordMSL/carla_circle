@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+
+
+	<include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch">
+		<arg name="rolename" value="stanford_hero" />
+	</include>
+
+	<include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch">
+		<arg name="rolename" value="stanford_ego" />
+	</include>
+
+</launch>

@@ -9,11 +9,15 @@
 import rospy
 import tf
 from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Pose
 from nav_msgs.msg import Path, Odometry
 
 
 import numpy as np
 from scipy.spatial import KDTree
+
+import carla
+from carla_circle.srv import GetAvailablePath
 
 class odom_state(object):
     def __init__(self):
@@ -61,6 +65,8 @@ class MapUpdater:
         self.steps = rospy.get_param("~steps")      # # of waypoints in the track
         self.distance = rospy.get_param("~distance")     # distance between two waypoints
         freq = rospy.get_param("~update_frequency")
+        exit_time = rospy.get_param("~exit_time")
+
 
         # state information
         self.stateReady = False
@@ -74,13 +80,17 @@ class MapUpdater:
         self.ego_track_info = Path()
         self.ado_track_info = Path()
 
+        # service proxy to get a path update from carla world
+        rospy.wait_for_service("get_path")
+        self.get_path_handle = rospy.ServiceProxy('get_path', GetAvailablePath)
+
         # subscribers, publishers
-        rospy.Subscriber("/MSLcar0/ground_truth/odometry", Odometry, self.odom_cb)
-        rospy.Subscriber("/MSLcar1/ground_truth/odometry", Odometry, self.ado_odom_cb)
-        self.ego_track_pub = rospy.Publisher("/MSLcar0/mpc/ego_track_information", Path, queue_size=10)
-        self.ado_track_pub = rospy.Publisher("/MSLcar0/mpc/ado_track_information", Path, queue_size=10)
+        rospy.Subscriber("MSLcar0/ground_truth/odometry", Odometry, self.odom_cb)
+        rospy.Subscriber("MSLcar1/ground_truth/odometry", Odometry, self.ado_odom_cb)
+        self.ego_track_pub = rospy.Publisher("MSLcar0/mpc/ego_track_information", Path, queue_size=10)
+        self.ado_track_pub = rospy.Publisher("MSLcar0/mpc/ado_track_information", Path, queue_size=10)
         self.update_timer = rospy.Timer(rospy.Duration(1.0/freq), self.timer_cb)
-        self.exit_timer = rospy.Timer(rospy.Duration(130), self.exit_cb)
+        self.exit_timer = rospy.Timer(rospy.Duration(exit_time), self.exit_cb)
 
         if True:
             self.entrance_1_tree = KDTree([[57.08933792114258, 6.036137580871582], [53.48933792114258, 6.036137580871582], [50.08933792114258, 6.036137580871582], [46.48933792114258, 6.036137580871582], [43.239620208740234, 6.084680557250977], [39.9899787902832, 6.1332221031188965], [36.736148834228516, 6.183269500732422], [33.47547149658203, 6.250435829162598], [30.21529769897461, 6.338794708251953], [26.944692611694336, 6.448661804199219], [23.302072525024414, 7.09058141708374], [19.950820922851562, 8.655783653259277], [17.120553970336914, 11.037027359008789], [15.024080276489258, 13.627730369567871], [12.915298461914062, 15.851956367492676], [10.631769180297852, 17.75967788696289], [8.080914497375488, 19.291685104370117], [5.323992729187012, 20.411190032958984], [2.427210569381714, 21.091306686401367], [-0.5400566458702087, 21.31570053100586], [-3.506174325942993, 21.07895851135254], [-6.400100231170654, 20.386791229248047], [-9.152338981628418, 19.25581932067871], [-11.696793556213379, 17.713207244873047], [-13.972362518310547, 15.795997619628906], [-16.07497215270996, 13.566105842590332], [-17.781204223632812, 11.12834358215332], [-19.09031105041504, 8.456239700317383], [-19.970857620239258, 5.613962173461914], [-20.40169906616211, 2.669767379760742], [-20.37247085571289, -0.3058292865753174], [-19.883880615234375, -3.2409920692443848], [-18.947669982910156, -6.06542444229126], [-17.58632469177246, -8.711297035217285], [-15.832539558410645, -11.115072250366211], [-13.701011657714844, -13.318000793457031], [-11.388221740722656, -15.190141677856445], [-8.813955307006836, -16.682472229003906], [-6.040032863616943, -17.7591609954834], [-3.133068084716797, -18.394350051879883], [-0.16268262267112732, -18.57278060913086], [2.799415111541748, -18.290143966674805], [5.682278156280518, -17.55325698852539]])
@@ -105,7 +115,7 @@ class MapUpdater:
         track_width = 5.0
         if abs(position_x) < 25 and abs(position_y) < 25:
             pos_the = np.arctan2(position_y, position_x)
-            the = np.linspace(pos_the-0.5, pos_the - 0.5 + np.pi, self.steps)
+            the = np.linspace(pos_the-0.6, pos_the - 0.6 + np.pi, self.steps)
 
             radius = 21.75
             for i in range(self.steps):
@@ -182,7 +192,7 @@ class MapUpdater:
         print(" SWITCHED TO EXIT MODE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
     def update_ego_track_exit(self):
-        print(" UPDATE EXIT TRACK !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        # print(" UPDATE EXIT TRACK !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         ego_pos = self.state.get_position()
         track_c, track_w = self.get_exit_path(ego_pos[0], ego_pos[1])
         self.ego_track_info.header.stamp = rospy.Time.now()
@@ -203,22 +213,42 @@ class MapUpdater:
 
 
     def get_exit_path(self, position_x, position_y):
-        print(" GET EXIT PATH !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         track_center = np.zeros((2, self.steps))
         track_width = 5.0
         pos_the = np.arctan2(position_y, position_x)
-        print(" this is current_pos ", position_x, position_y, " and theta ", pos_the)
-        if pos_the > 0:
+        if pos_the > 0:    # if the car is currently in the other half circle
             the = np.linspace(pos_the-0.5, pos_the - 0.5 + np.pi, self.steps)
             radius = 21.75
             for i in range(self.steps):
                 track_center[:,i] = [radius*np.cos(the[i]), radius*np.sin(the[i])]
-        else:
-            _, idx = self.exit_tree.query([position_x, position_y])
-            if idx < 2:
-                track_center = self.exit_tree.data[idx: idx + 20, :].T.copy()
+        else:     # if the car is in existing half circle
+            if position_x < 30: # still use our stored path information
+                _, idx = self.exit_tree.query([position_x, position_y])
+                if idx < 2:
+                    track_center = self.exit_tree.data[idx: idx + 20, :].T.copy()
+                else:
+                    track_center = self.exit_tree.data[idx - 2: idx + 18, :].T.copy()
             else:
-                track_center = self.exit_tree.data[idx - 2: idx + 18, :].T.copy()
+                current_pose = Pose()
+                current_pose.position.x = position_x
+                current_pose.position.y = position_y
+                try:
+                    track_width = 3.2
+                    track_center = np.zeros((2, self.steps))
+                    path_list_resp = self.get_path_handle(current_pose)
+                    path = path_list_resp.paths.paths[0]
+                    # print(" this is our beloved path", path)
+                    for i in range(self.steps - 2):
+                        track_center[0,i+2] = path.poses[i].pose.position.x
+                        track_center[1,i+2] = path.poses[i].pose.position.y
+                    track_center[0, 1] = 2*track_center[0, 2] - track_center[0, 3]
+                    track_center[1, 1] = 2*track_center[1, 2] - track_center[1, 3]
+                    track_center[0, 0] = 2*track_center[0, 1] - track_center[0, 2]
+                    track_center[1, 0] = 2*track_center[1, 1] - track_center[1, 2]
+                except rospy.ServiceException, e:
+                    print "Service call failed: %s"%e
+                # print(" track center ", track_center)
+
         return track_center, track_width
 
     def timer_cb(self, event):
