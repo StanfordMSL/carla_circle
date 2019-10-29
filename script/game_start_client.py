@@ -12,7 +12,7 @@ def restart_client():
     rospy.init_node('restart_client', anonymous=True)
 
     try:
-        srv_name = '/MSLcar0/restart'
+        srv_name = 'MSLcar0/restart'
         rospy.wait_for_service(srv_name)
         restart = rospy.ServiceProxy(srv_name, Empty)
         restart()

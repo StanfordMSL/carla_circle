@@ -144,7 +144,7 @@ def get_actor_display_name(actor, truncate=250):
 
 
 class World(object):
-    def __init__(self, carla_world, hud, actor_filter, actor_role_name='ego_vehicle'):
+    def __init__(self, carla_world, hud, actor_filter, args, actor_role_name='ego_vehicle'):
         self.world = carla_world
         self.actor_role_name = actor_role_name
         self.map = self.world.get_map()
@@ -157,10 +157,16 @@ class World(object):
         self._weather_presets = find_weather_presets()
         self._weather_index = 0
         self._actor_filter = actor_filter
+        self.init_positionx = args.positionx
+        self.init_positiony = args.positiony
+
+        self.color = args.color
+
         self.restart()
         self.world.on_tick(hud.on_world_tick)
         self.recording_enabled = False
         self.recording_start = 0
+
 
     def restart(self):
         # Keep same camera config if the camera manager exists.
@@ -172,7 +178,8 @@ class World(object):
         blueprint.set_attribute('role_name', self.actor_role_name)
         if blueprint.has_attribute('color'):
             # color = random.choice(blueprint.get_attribute('color').recommended_values)
-            color = "255,255,255"
+            # color = "255,255,255"
+            color = self.color
             blueprint.set_attribute('color', color)
         # Spawn the player.
         if self.player is not None:
@@ -202,7 +209,7 @@ class World(object):
             # for i in range(10):
             #     print(" these are all the available spawn points ", spawn_points[i])
             # spawn_point = spawn_points[179]
-            spawn_point = Transform(Location(x=34, y=-8.5, z=2.5), Rotation(pitch=1, yaw=180, roll=1))
+            spawn_point = Transform(Location(x=self.init_positionx, y=self.init_positiony, z=2.5), Rotation(pitch=1, yaw=180, roll=1))
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         # Set up the sensors.
         self.collision_sensor = CollisionSensor(self.player, self.hud)
@@ -790,7 +797,7 @@ def game_loop(args):
             pygame.HWSURFACE | pygame.DOUBLEBUF)
 
         hud = HUD(args.width, args.height)
-        world = World(client.get_world(), hud, args.filter, args.rolename)
+        world = World(client.get_world(), hud, args.filter, args, args.rolename)
         controller = KeyboardControl(world, args.autopilot)
 
         clock = pygame.time.Clock()
@@ -856,8 +863,26 @@ def main():
         metavar='NAME',
         default='ego_vehicle',
         help='actor role name (default: "ego_vehicle")')
+    argparser.add_argument(
+        '--positionx',
+        type=float,
+        metavar='POSX',
+        default=34,
+        help='actor start position x coordinate')
+    argparser.add_argument(
+        '--positiony',
+        type=float,
+        metavar='POSY',
+        default=-8.5,
+        help='actor start position y coordinate ')
+    argparser.add_argument(
+        '--color',
+        # type=string,
+        metavar='COLOR',
+        default='255,255,255',
+        help='color of the spawn vehicle')
     args = argparser.parse_args()
-
+    
     args.width, args.height = [int(x) for x in args.res.split('x')]
 
     log_level = logging.DEBUG if args.debug else logging.INFO

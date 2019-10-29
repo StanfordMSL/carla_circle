@@ -46,7 +46,7 @@ class RoadGeometryVisualization(object):
             rate.sleep()
 
 if __name__=="__main__":
-    host = rospy.get_param("/carla/host", "127.0.0.1")
+    host = rospy.get_param("/carla/host", "localhost")
     port = rospy.get_param("/carla/port", 2000)
 
     rospy.loginfo("Trying to connect to {host}:{port}".format(

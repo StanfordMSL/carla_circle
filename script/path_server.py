@@ -26,7 +26,7 @@ class PathServer(object):
     in the road network
     """
     WAYPOINT_DISTANCE = 3.0
-    PATH_LENGTH = 10      #    10 waypoints, 30m in total
+    PATH_LENGTH = 20      #    10 waypoints, 30m in total
 
     def __init__(self, carla_world):
         rospy.init_node("path_server", anonymous=True)
@@ -79,7 +79,7 @@ class PathServer(object):
 
 def main():
 
-    host = rospy.get_param("/carla/host", "127.0.0.1")
+    host = rospy.get_param("/carla/host", "localhost")
     port = rospy.get_param("/carla/port", 2000)
 
     rospy.loginfo("Trying to connect to {host}:{port}".format(
