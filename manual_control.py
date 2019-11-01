@@ -79,6 +79,7 @@ import logging
 import math
 import random
 import re
+import rospy
 import weakref
 
 try:
@@ -801,7 +802,7 @@ def game_loop(args):
         controller = KeyboardControl(world, args.autopilot)
 
         clock = pygame.time.Clock()
-        while True:
+        while not rospy.core.is_shutdown():
             clock.tick_busy_loop(60)
             if controller.parse_events(client, world, clock):
                 return
@@ -881,9 +882,19 @@ def main():
         metavar='COLOR',
         default='255,255,255',
         help='color of the spawn vehicle')
+    argparser.add_argument(
+        '__name:=',
+        help='Set automatically when called with roslaunch/rosrun'
+    )
+    argparser.add_argument(
+        '__log:=',
+        help='Set automatically when called with roslaunch/rosrun'
+    )
     args = argparser.parse_args()
     
     args.width, args.height = [int(x) for x in args.res.split('x')]
+
+    rospy.init_node('manual_control')
 
     log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(format='%(levelname)s: %(message)s', level=log_level)
