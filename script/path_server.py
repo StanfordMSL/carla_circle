@@ -24,12 +24,12 @@ class PathServer(object):
     """
     this class generates available future paths given a carla.location
     in the road network
-    """
-    WAYPOINT_DISTANCE = 3.0
-    PATH_LENGTH = 20      #    10 waypoints, 30m in total
+    """      #    10 waypoints, 30m in total
 
     def __init__(self, carla_world):
         rospy.init_node("path_server", anonymous=True)
+        self.WAYPOINT_DISTANCE = rospy.get_param("~distance", 2.0)
+        self.PATH_LENGTH = rospy.get_param("~steps", 15)
         self.world = carla_world
         self.map = carla_world.get_map()
 
