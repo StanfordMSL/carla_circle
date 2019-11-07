@@ -11,6 +11,7 @@ import tf
 from nav_msgs.msg import Odometry
 from trajectory_msgs.msg import MultiDOFJointTrajectory
 from ackermann_msgs.msg import AckermannDrive
+from visualization_msgs.msg import Marker
 
 from carla_ros_bridge_msgs.msg import CarlaEgoVehicleControl
 from scipy.spatial import KDTree
@@ -83,7 +84,8 @@ class AckermannController:
         rospy.Subscriber("MSLcar0/ground_truth/odometry", Odometry, self.odom_cb)
         rospy.Subscriber("MSLcar0/command/trajectory", MultiDOFJointTrajectory, self.desired_waypoints_cb)
         self.command_pub = rospy.Publisher("/carla/" + rolename + "/ackermann_cmd", AckermannDrive, queue_size=10)
-        self.vehicle_cmd_pub = rospy.Publisher("/carla/" + rolename + "/vehicle_control_cmd", CarlaEgoVehicleControl, queue_size=10)
+        # self.vehicle_cmd_pub = rospy.Publisher("/carla/" + rolename + "/vehicle_control_cmd", CarlaEgoVehicleControl, queue_size=10)
+        self.tracking_pt_viz_pub = rospy.Publisher("tracking_point_mkr", Marker, queue_size=10)
         self.ctrl_timer = rospy.Timer(rospy.Duration(1.0/ctrl_freq), self.timer_cb)
 
     def desired_waypoints_cb(self, msg):
@@ -114,16 +116,6 @@ class AckermannController:
         cmd_msg.acceleration = 0
         cmd_msg.jerk = 0
 
-
-        # vehicle_cmd_msg = CarlaEgoVehicleControl()
-        # vehicle_cmd_msg.header.stamp = rospy.Time.now()
-        # vehicle_cmd_msg.header.frame_id = "map"
-        # vehicle_cmd_msg.throttle = 0
-        # vehicle_cmd_msg.steer = 0
-        # vehicle_cmd_msg.brake = 0
-        # vehicle_cmd_msg.hand_brake = 0
-        # vehicle_cmd_msg.reverse = 0
-
         if self.pathReady and self.stateReady:
             pos_x, pos_y = self.state.get_position()
 
@@ -141,14 +133,7 @@ class AckermannController:
 
             target_speed = np.linalg.norm(target_vel)
 
-
-            # set control values for ackermann_cmd
-            # str_target = target_pt
-            # while (np.linalg.norm([str_target[0] - pos_x, str_target[1] - pos_y]) < 3) and str_idx < self.traj_steps - 1:
-            #     str_idx += 1
-            #     str_target = self.path_tree.data[str_idx, :]
-            #     print(" str target changed from vel target!!!!!!!!!!!!", str_target, "    ", target_pt)
-            steer = self.compute_ackermann_cmd(target_pt)
+            steer = self.compute_ackermann_steer(target_pt)
             cmd_msg.steering_angle = steer
             cmd_msg.speed = target_speed
             if self.state.get_speed() - target_speed > 0.0:
@@ -158,28 +143,29 @@ class AckermannController:
             else:
                 cmd_msg.acceleration = 0
 
-            # control values for CarlaEgoVehicleControl
-            # vehicle_cmd_msg.steer = -steer
-            # # print("target %2.2f"% target_speed, " ego %2.2f"%self.state.get_speed())
-            # if self.state.get_speed() - target_speed > 1.0:
-            #     # print(" in braking mode ")
-            #     vehicle_cmd_msg.throttle = 0
-            #     vehicle_cmd_msg.brake = 1
-            # elif self.state.get_speed() - target_speed > 0.0:
-            #     # print(" in less throttle mode ")
-            #     vehicle_cmd_msg.throttle = 0.57 +  (target_speed - self.state.get_speed()) * 1
-            # elif target_speed - self.state.get_speed() > 0.2:
-            #     # print(" in acceleration  mode ")
-            #     vehicle_cmd_msg.throttle = np.clip(0.57 + (target_speed - self.state.get_speed()) * 0.3, 0, 1)
-            # else:
-            #     # print(" apply forward base throttlr")
-            #     vehicle_cmd_msg.throttle = 0.57
+            # for visualization purposes and debuging control node
+            mk_msg = Marker()
+            mk_msg.header.stamp = rospy.Time.now()
+            mk_msg.header.frame_id = 'map'
+            mk_msg.pose.position.x = target_pt[0]
+            mk_msg.pose.position.y = target_pt[1]
+            mk_msg.type = Marker.CUBE
+            mk_msg.scale.x = 3
+            mk_msg.scale.y = 3
+            mk_msg.scale.z = 3
+            mk_msg.color.a = 1.0
+            mk_msg.color.r = 1
+            mk_msg.color.b = 1
+            self.tracking_pt_viz_pub.publish(mk_msg)
+
 
         # self.vehicle_cmd_pub.publish(vehicle_cmd_msg)
         self.command_pub.publish(cmd_msg)
 
 
-    def compute_ackermann_cmd(self, target_pt):
+
+
+    def compute_ackermann_steer(self, target_pt):
         pos_x, pos_y, yaw = self.state.get_pose()
         if np.linalg.norm([target_pt[0] - pos_x, target_pt[1] - pos_y]) < 1:
             print("target point too close!!!!!!!!")
