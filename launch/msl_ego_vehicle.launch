@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <launch>
-    <arg name="spawn_point" default="[-3.0, -30.0, 0.0, 90.0]" />
+    <arg name="spawn_point" default="[-6.0, -40.0, 2.0, 90.0]" />
     <arg name="vehicle_filter" default="vehicle.toyota.*" />
 
     <rosparam param="spawn_point" subst_value="True">$(arg spawn_point)</rosparam>
