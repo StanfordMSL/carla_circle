@@ -154,12 +154,14 @@ class MapUpdater:
         self.ego_track_info.header.stamp = rospy.Time.now()
         self.ego_track_info.header.frame_id = "map"
         self.ego_track_info.poses = []
+
         for i in range(self.steps):
             pose_s = PoseStamped()
             pose_s.header = self.ego_track_info.header
             pose_s.pose.position.x = track_c[0,i]
             pose_s.pose.position.y = track_c[1,i]
             self.ego_track_info.poses.append(pose_s)
+
         # append the track width info as the last element of path.poses
         track_w_pose = PoseStamped()
         track_w_pose.header = self.ego_track_info.header
@@ -168,11 +170,6 @@ class MapUpdater:
 
     def update_ado_track(self):
         ado_pos = self.ado_state.get_position()
-        # if ado_pos[1] > 60:
-        #     self.ado_track_info = Path()
-
-
-
         current_pose = Pose()
         current_pose.position.x = ado_pos[0]
         current_pose.position.y = ado_pos[1]
@@ -182,7 +179,7 @@ class MapUpdater:
             path_list_resp = self.get_path_handle(current_pose)
             # path = path_list_resp.paths.paths[0]
             path = random.choice(path_list_resp.paths.paths)     # choose a random path
-            # print(" this is our beloved path", path)
+            # print("This is our believed path", path)
             for i in range(self.steps - 2):
                 track_center[0,i+2] = path.poses[i].pose.position.x
                 track_center[1,i+2] = path.poses[i].pose.position.y
