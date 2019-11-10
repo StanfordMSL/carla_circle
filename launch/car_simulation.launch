@@ -27,6 +27,7 @@
 			<param name="update_frequency" value="10.0" />
 			<param name="exit_time" value="300" />
 		</node>
+
 		<!-- path server updates path according to carla world map -->
 		<node name="path_server" pkg="carla_circle" type="path_server.py" output="screen">
 			<param name="steps" value="$(arg steps)" />
