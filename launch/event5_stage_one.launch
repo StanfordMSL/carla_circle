@@ -5,8 +5,10 @@
 	<arg name="rolename" default="stanford_ego" />
 	<arg name="host" default="localhost" />
 	<arg name="port" default="2000" />
-	<arg name="speed" default="5" />
-
+	<arg name="max_speed" default="5.0" />
+	<arg name="opp_speed" default="5.0" />
+	<arg name="plan_horizon" default="5.0" />
+	<arg name="plan_steps" default="10" />
 
 	<!-- bridge -->
 	<include file="$(find carla_ros_bridge)/launch/carla_ros_bridge.launch">
@@ -15,12 +17,15 @@
 		<arg name="ego_vehicle_name" value="$(arg rolename)" />
 	</include>
 
-
 	<!-- shared by all the cars  -->
 	<node name="car_filter" pkg="carla_circle" type="car_filter.py" output="screen" />
 
 	<include file="$(find carla_circle)/launch/car_simulation.launch">
 		<arg name="rolename" value="$(arg rolename)" />
+		<arg name="max_speed" value="$(arg max_speed)" />
+		<arg name="opp_speed" value="$(arg opp_speed)" />
+		<arg name="plan_horizon" value="$(arg plan_horizon)" />
+		<arg name="plan_steps" value="$(arg plan_steps)" />
 	</include>
 
 	<!-- visualization -->
@@ -29,8 +34,10 @@
 	<!-- game planner -->
 	<include file="$(find uavgame)/launch/main_mpc_gurobi.launch">
 		<arg name="role_name" value="$(arg rolename)" />
-		<arg name="high_vel" value="$(arg speed)" />
-		<arg name="low_vel" value="$(arg speed)" />
+		<arg name="high_vel" value="$(arg max_speed)" />
+		<arg name="low_vel" value="$(arg opp_speed)" />
+		<arg name="plan_horizon" value="$(arg plan_horizon)" />
+		<arg name="plan_steps" value="$(arg plan_steps)" />
 	</include>
 
 	<!-- Ackermann control for the vehicle-->
