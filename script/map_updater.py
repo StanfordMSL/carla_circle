@@ -67,7 +67,9 @@ class MapUpdater:
         self.distance = rospy.get_param("~distance")     # distance between two waypoints
         freq = rospy.get_param("~update_frequency")
         exit_time = rospy.get_param("~exit_time")
-
+        self.max_speed = rospy.get_param("~max_speed")
+        self.opp_speed = rospy.get_param("~opp_speed")
+        self.plan_horizon = rospy.get_param("~plan_horizon")
 
         # state information
         self.stateReady = False
@@ -111,14 +113,16 @@ class MapUpdater:
             self.ado_stateReady = True
 
     def get_path_from_position(self, position_x, position_y):
-
         track_center = np.zeros((2, self.steps))
         track_width = 5.0
         if abs(position_x) < 25 and abs(position_y) < 25:
-            pos_the = np.arctan2(position_y, position_x)
-            the = np.linspace(pos_the-0.6, pos_the - 0.6 + np.pi, self.steps)
-
             radius = 21.75
+            pos_the = np.arctan2(position_y, position_x)
+            the_start = pos_the - 0.2
+            angle = 2.0*self.max_speed*self.plan_horizon/radius
+            the_end = the_start + angle
+            the = np.linspace(the_start, the_end, self.steps)
+
             for i in range(self.steps):
                 track_center[:,i] = [radius*np.cos(the[i])-0.5, radius*np.sin(the[i])-0.5]
 
