@@ -2,7 +2,6 @@
 
 <launch>
 
-	<arg name="time_step" default="0.5" />
 	<arg name="rolename" default="stanford_ego" />
 	<arg name="steps" default="20" />
 	<arg name="distance" default="4.0" />
@@ -12,6 +11,7 @@
 	<arg name="opp_speed" default="5.0" />
 	<arg name="plan_horizon" default="5.0" />
 	<arg name="plan_steps" default="10" />
+	<arg name="time_step" value="$(eval arg('plan_horizon')/arg('plan_steps'))" />
 
 	<group ns="$(arg rolename)">
 
@@ -45,7 +45,7 @@
 			<param name="rolename" value="$(arg rolename)" />
 			<param name="time_step" value="$(arg time_step)" />
 			<param name="ctrl_freq" value="100" />
-			<param name="str_prop" value="1" />
+			<param name="str_prop" value="0.55" />
 			<param name="plan_steps" value="10" />
 			<param name="plan_steps" value="$(arg plan_steps)" />
 		</node>
