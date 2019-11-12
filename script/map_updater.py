@@ -84,7 +84,7 @@ class MapUpdater:
         self.ado_track_info = Path()
 
         # service proxy to get a path update from carla world
-        rospy.wait_for_service("get_path")
+        rospy.wait_for_service("get_path", 1)
         self.get_path_handle = rospy.ServiceProxy('get_path', GetAvailablePath)
 
         # subscribers, publishers
@@ -174,30 +174,30 @@ class MapUpdater:
 
     def update_ado_track(self):
         ado_pos = self.ado_state.get_position()
-        current_pose = Pose()
-        current_pose.position.x = ado_pos[0]
-        current_pose.position.y = ado_pos[1]
-        try:
-            track_width = 3.2
-            track_center = np.zeros((2, self.steps))
-            path_list_resp = self.get_path_handle(current_pose)
-            # path = path_list_resp.paths.paths[0]
-            path = random.choice(path_list_resp.paths.paths)     # choose a random path
-            # print("This is our believed path", path)
-            for i in range(self.steps - 2):
-                track_center[0,i+2] = path.poses[i].pose.position.x
-                track_center[1,i+2] = path.poses[i].pose.position.y
-            track_center[0, 1] = 2*track_center[0, 2] - track_center[0, 3]
-            track_center[1, 1] = 2*track_center[1, 2] - track_center[1, 3]
-            track_center[0, 0] = 2*track_center[0, 1] - track_center[0, 2]
-            track_center[1, 0] = 2*track_center[1, 1] - track_center[1, 2]
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
+        # current_pose = Pose()
+        # current_pose.position.x = ado_pos[0]
+        # current_pose.position.y = ado_pos[1]
+        # try:
+        #     track_width = 3.2
+        #     track_center = np.zeros((2, self.steps))
+        #     path_list_resp = self.get_path_handle(current_pose)
+        #     # path = path_list_resp.paths.paths[0]
+        #     path = random.choice(path_list_resp.paths.paths)     # choose a random path
+        #     # print("This is our believed path", path)
+        #     for i in range(self.steps - 2):
+        #         track_center[0,i+2] = path.poses[i].pose.position.x
+        #         track_center[1,i+2] = path.poses[i].pose.position.y
+        #     track_center[0, 1] = 2*track_center[0, 2] - track_center[0, 3]
+        #     track_center[1, 1] = 2*track_center[1, 2] - track_center[1, 3]
+        #     track_center[0, 0] = 2*track_center[0, 1] - track_center[0, 2]
+        #     track_center[1, 0] = 2*track_center[1, 1] - track_center[1, 2]
+        # except rospy.ServiceException, e:
+        #     print "Service call failed: %s"%e
 
-        track_c = track_center
-        track_w = track_width
+        # track_c = track_center
+        # track_w = track_width
 
-        # track_c, track_w = self.get_path_from_position(ado_pos[0], ado_pos[1])
+        track_c, track_w = self.get_path_from_position(ado_pos[0], ado_pos[1])
         self.ado_track_info.header.stamp = rospy.Time.now()
         self.ado_track_info.header.frame_id = "map"
         self.ado_track_info.poses = []
