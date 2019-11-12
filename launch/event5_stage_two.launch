@@ -6,9 +6,9 @@
 	<arg name="port" default="2000" />
 	<arg name="rolename1" default="stanford_ego" />
 	<arg name="rolename2" default="stanford_hero" />
-	<arg name="ego1_vel" default="10.0" />
-	<arg name="ego2_vel" default="10.0" />
-	<arg name="opp_vel" default="20.0" />
+	<arg name="ego1_vel" default="15.0" />
+	<arg name="ego2_vel" default="12.5" />
+	<arg name="opp_vel" default="5.0" />
 	<arg name="plan_horizon" default="2.5" />
 	<arg name="plan_steps" default="5" />
 
