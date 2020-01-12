@@ -1,4 +1,4 @@
-#!/bin/python2
+#!/usr/bin/env python
 """
 Stanford MSL Carla Ego Vehicle
 """
