@@ -41,7 +41,7 @@
 
 	<!-- Ackermann control for the vehicle-->
 	<include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch">
-		<arg name="rolename" value="$(arg rolename)" />
+		<arg name="role_name" value="$(arg rolename)" />
 	</include>
 
 </launch>

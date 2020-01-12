@@ -56,11 +56,11 @@
 
 	<!-- Ackermann controls for the vehicles-->
 	<include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch">
-		<arg name="rolename" value="$(arg rolename1)" />
+		<arg name="role_name" value="$(arg rolename1)" />
 		<arg name="delay" value="5.0" />
 	</include>
 	<include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch">
-		<arg name="rolename" value="$(arg rolename2)" />
+		<arg name="role_name" value="$(arg rolename2)" />
 		<arg name="delay" value="1.0" />
 	</include>
 
