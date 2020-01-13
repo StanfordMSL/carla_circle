@@ -13,7 +13,7 @@ from trajectory_msgs.msg import MultiDOFJointTrajectory
 from ackermann_msgs.msg import AckermannDrive
 from visualization_msgs.msg import Marker
 
-from carla_ros_bridge_msgs.msg import CarlaEgoVehicleControl
+from carla_msgs.msg import CarlaEgoVehicleControl
 from scipy.spatial import KDTree
 import numpy as np
 import timeit
