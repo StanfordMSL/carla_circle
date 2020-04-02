@@ -6,17 +6,16 @@
 	<arg name="port" default="2000" />
 	<arg name="rolename1" default="stanford_ego" />
 	<arg name="rolename2" default="stanford_hero" />
-	<arg name="ego1_vel" default="15.0" />
-	<arg name="ego2_vel" default="12.5" />
-	<arg name="opp_vel" default="5.0" />
-	<arg name="plan_horizon" default="2.5" />
-	<arg name="plan_steps" default="5" />
+	<arg name="ego1_vel" default="5.0" />
+	<arg name="ego2_vel" default="7.5" />
+	<arg name="opp_vel" default="8.0" />
+	<arg name="plan_horizon" default="3.0" />
+	<arg name="plan_steps" default="10" />
 
 	<!-- share one bridge  -->
 	<include file="$(find carla_ros_bridge)/launch/carla_ros_bridge.launch">
 		<arg name="host" value="$(arg host)" />
 		<arg name="port" value="$(arg port)" />
-		<arg name="ego_vehicle_name" value="['stanford_ego', 'stanford_hero']" />
 	</include>
 
 	<!-- share one filter -->
@@ -57,11 +56,11 @@
 
 	<!-- Ackermann controls for the vehicles-->
 	<include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch">
-		<arg name="rolename" value="$(arg rolename1)" />
-		<arg name="delay" value="5.0" />
+		<arg name="role_name" value="$(arg rolename1)" />
+		<arg name="delay" value="10.0" />
 	</include>
 	<include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch">
-		<arg name="rolename" value="$(arg rolename2)" />
+		<arg name="role_name" value="$(arg rolename2)" />
 		<arg name="delay" value="1.0" />
 	</include>
 

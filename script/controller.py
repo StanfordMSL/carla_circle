@@ -13,7 +13,7 @@ from trajectory_msgs.msg import MultiDOFJointTrajectory
 from ackermann_msgs.msg import AckermannDrive
 from visualization_msgs.msg import Marker
 
-from carla_ros_bridge_msgs.msg import CarlaEgoVehicleControl
+from carla_msgs.msg import CarlaEgoVehicleControl
 from scipy.spatial import KDTree
 import numpy as np
 import timeit
@@ -41,7 +41,11 @@ class odom_state(object):
         self.vx = odom_msg.twist.twist.linear.x
         self.vy = odom_msg.twist.twist.linear.y
         self.speed = np.sqrt(self.vx**2 + self.vy**2)
-        # print("this is the current speed", self.speed)
+        # print(
+        #     "this is the current speed @ time",
+        #     self.speed,
+        #     self.time
+        # )
 
     def get_position(self):
         return [self.x, self.y]
@@ -50,7 +54,7 @@ class odom_state(object):
         return [self.x, self.y, self.yaw]
 
     def get_velocity(self):
-        return [self.vs, self.vy]
+        return [self.vx, self.vy]
 
     def get_speed(self):
         return self.speed
@@ -58,12 +62,15 @@ class odom_state(object):
 class AckermannController:
     def __init__(self):
         rospy.init_node("controller", anonymous=True)
+        self.time = rospy.get_time()
 
-        # # retrieve ros parameters
+        # retrieve ros parameters
+        self.max_speed = rospy.get_param("~max_speed")
         self.time_step = rospy.get_param("~time_step")
         self.traj_steps = rospy.get_param("~plan_steps")
         ctrl_freq = rospy.get_param("~ctrl_freq")
         rolename = rospy.get_param("~rolename")
+        self.steer_prev = 0.0
 
         # state information
         self.stateReady = False
@@ -79,12 +86,29 @@ class AckermannController:
 
         # # PID controller parameter
         self.pid_str_prop = rospy.get_param("~str_prop")
+        self.pid_str_deriv = rospy.get_param("~str_deriv")
 
         # subscribers, publishers
-        rospy.Subscriber("MSLcar0/ground_truth/odometry", Odometry, self.odom_cb)
-        rospy.Subscriber("MSLcar0/command/trajectory", MultiDOFJointTrajectory, self.desired_waypoints_cb)
-        self.command_pub = rospy.Publisher("/carla/" + rolename + "/ackermann_cmd", AckermannDrive, queue_size=10)
-        # self.vehicle_cmd_pub = rospy.Publisher("/carla/" + rolename + "/vehicle_control_cmd", CarlaEgoVehicleControl, queue_size=10)
+        rospy.Subscriber(
+            "/carla/" + rolename + "/odometry",
+            Odometry,
+            self.odom_cb
+        )
+        rospy.Subscriber(
+            "MSLcar0/command/trajectory",
+            MultiDOFJointTrajectory,
+            self.desired_waypoints_cb
+        )
+        self.command_pub = rospy.Publisher(
+            "/carla/" + rolename + "/ackermann_cmd",
+            AckermannDrive,
+            queue_size=10
+        )
+        # self.vehicle_cmd_pub = rospy.Publisher(
+        #     "/carla/" + rolename + "/vehicle_control_cmd",
+        #     CarlaEgoVehicleControl,
+        #     queue_size=10
+        # )
         self.tracking_pt_viz_pub = rospy.Publisher("tracking_point_mkr", Marker, queue_size=10)
         self.ctrl_timer = rospy.Timer(rospy.Duration(1.0/ctrl_freq), self.timer_cb)
 
@@ -108,13 +132,19 @@ class AckermannController:
 
     def timer_cb(self, event):
         cmd_msg = AckermannDrive()
+        current_time = rospy.get_time()
+        # delta_t = current_time - self.time
+        delta_t = self.time_step
+        # delta_t = 0.05
+        self.time = current_time
+        jerk = 2.0
 
         # cmd_msg.header.stamp = rospy.Time.now()
-        cmd_msg.steering_angle = 0
-        cmd_msg.steering_angle_velocity = 0
-        cmd_msg.speed = 0
-        cmd_msg.acceleration = 0
-        cmd_msg.jerk = 0
+        cmd_msg.steering_angle = 0.0
+        cmd_msg.steering_angle_velocity = 0.0
+        cmd_msg.speed = 0.0
+        cmd_msg.acceleration = 0.0
+        cmd_msg.jerk = jerk
 
         if self.pathReady and self.stateReady:
             pos_x, pos_y = self.state.get_position()
@@ -139,15 +169,53 @@ class AckermannController:
 
             target_speed = np.linalg.norm(target_vel)
 
+            speed_diff = target_speed - self.state.get_speed()
+            # pos_diff = target_pt - self.state.get_position()
+            # acceleration = cmd_msg.acceleration + 2.0*(
+            #     pos_diff/self.time_step**2.0 - speed_diff/self.time_step
+            # )
+            acceleration = abs(speed_diff) / (2.0 * delta_t)
+            cmd_msg.acceleration = np.min([1.5, acceleration])
             steer = self.compute_ackermann_steer(target_pt)
+            
+            steer_diff = abs(steer - self.steer_prev)
+            if steer_diff >= 0.3:
+                print("      0.3")
+                steer = self.steer_prev
+            elif steer_diff >= 0.05:
+                print("          0.05")
+                acceleration = 0.0
+                target_speed = target_speed / 5.0
+
+            self.steer_prev = steer
+
+            if self.state.get_speed() - target_speed > 0.0:
+                # cmd_msg.acceleration = acceleration - 5
+                acceleration = -100.0
+                cmd_msg.speed = target_speed / 5.0
+                jerk = 1000.0
+            elif target_speed - self.state.get_speed() > 0.2:
+                acceleration = np.min([3.0, acceleration])
+            else:
+                acceleration = 0.0
+
             cmd_msg.steering_angle = steer
             cmd_msg.speed = target_speed
-            if self.state.get_speed() - target_speed > 0.0:
-                cmd_msg.acceleration = (target_speed - self.state.get_speed()) / (self.time_step * 2) - 5
-            elif target_speed - self.state.get_speed() > 0.2:
-                cmd_msg.acceleration = np.min([3, (target_speed - self.state.get_speed()) / (self.time_step * 2)])
-            else:
-                cmd_msg.acceleration = 0
+            cmd_msg.acceleration
+            cmd_msg.jerk = jerk
+
+            # Print out some debugging information
+            if abs(target_speed - self.max_speed) > 2.0:
+                # print("Posit diff:", pos_diff)
+                print("Speed diff:", speed_diff)
+                print("Current speed:", self.state.get_speed())
+                print("Desired speed:", target_speed)
+                print("Desired accel:", acceleration)
+                print("Desired jerk:", jerk)
+                print("Speed (sent):", cmd_msg.speed)
+                print("Accel (sent):", cmd_msg.acceleration)
+                print("Jerk  (sent):", cmd_msg.jerk)
+                print("delta t:", delta_t)
 
             # for visualization purposes and debuging control node
             mk_msg = Marker()
@@ -187,6 +255,15 @@ class AckermannController:
         rel_pos_unit = rel_pos / np.linalg.norm(rel_pos)
         rot = np.cross(rel_pos_unit, egoOri)
         steer = -rot[2] * self.pid_str_prop
+
+        if self.steer_cache is not None:
+            d_steer = (steer - self.steer_cache)
+        else:
+            d_steer = 0.0
+
+        # print("steer, d_steer:", steer, d_steer)
+
+        steer = steer + d_steer*self.pid_str_deriv
 
         self.steer_cache = steer
         return steer

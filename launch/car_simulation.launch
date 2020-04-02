@@ -28,7 +28,7 @@
 			<param name="steps" value="$(arg steps)" />
 			<param name="distance" value="$(arg distance)" />
 			<param name="update_frequency" value="10.0" />
-			<param name="exit_time" value="300" />
+			<param name="exit_time" value="600" />
 			<param name="max_speed" value="$(arg max_speed)" />
 			<param name="opp_speed" value="$(arg opp_speed)" />
 			<param name="plan_horizon" value="$(arg plan_horizon)" />
@@ -46,8 +46,9 @@
 			<param name="time_step" value="$(arg time_step)" />
 			<param name="ctrl_freq" value="100" />
 			<param name="str_prop" value="0.55" />
-			<param name="plan_steps" value="10" />
+			<param name="str_deriv" value="0.0" />
 			<param name="plan_steps" value="$(arg plan_steps)" />
+			<param name="max_speed" value="$(arg max_speed)" />
 		</node>
 
 		<node name="viz_node" pkg="carla_circle" type="visualization_node.py" output="screen" />
