@@ -2,43 +2,62 @@
 
 <launch>
 
+	<arg name="rolename" default="stanford_ego" />
+	<arg name="steps" default="20" />
+	<arg name="distance" default="4.0" />
+	<arg name="color" default="255, 200, 200" />
+	<arg name="spawn_point" default="[-6.0, -40.0, 2.0, 90.0]" />
+	<arg name="max_speed" default="5.0" />
+	<arg name="opp_speed" default="5.0" />
+	<arg name="plan_horizon" default="5.0" />
+	<arg name="plan_steps" default="10" />
+	<arg name="time_step" value="$(eval arg('plan_horizon')/arg('plan_steps'))" />
 
-	<arg name="time_step" default="0.5" />
-	<arg name="rolename"  />
-
-
-	<group ns="$(arg rolename)" >
+	<group ns="$(arg rolename)">
 
 		<!-- start service call for game node  -->
 		<node name="restart_call" pkg="carla_circle" type="game_start_client.py" output="screen" />
 
 		<!-- "perception module", acutally just filtering out cars that are relevant -->
-		<node name="game_ado_car_filter" pkg="carla_circle" type="game_ado_vehicle_filter.py" output="screen" >
+		<node name="game_ado_car_filter" pkg="carla_circle" type="game_ado_vehicle_filter.py" output="screen">
 			<param name="rolename" value="$(arg rolename)" />
 		</node>
 
 		<!-- this node works for game planner to publish current track center and track width for two cars -->
-	  <node name="map_updater" pkg="carla_circle" type="map_updater.py" output="screen" >
-	    <param name="steps" value="20" />
-	    <param name="distance" value="2" />
-	    <param name="update_frequency" value="10.0" />
+		<node name="map_updater" pkg="carla_circle" type="map_updater.py" output="screen">
+			<param name="steps" value="$(arg steps)" />
+			<param name="distance" value="$(arg distance)" />
+			<param name="update_frequency" value="10.0" />
 			<param name="exit_time" value="300" />
-	  </node>
+			<param name="max_speed" value="$(arg max_speed)" />
+			<param name="opp_speed" value="$(arg opp_speed)" />
+			<param name="plan_horizon" value="$(arg plan_horizon)" />
+		</node>
+
 		<!-- path server updates path according to carla world map -->
-		<node name="path_server" pkg="carla_circle" type="path_server.py" output="screen" />
+		<node name="path_server" pkg="carla_circle" type="path_server.py" output="screen">
+			<param name="steps" value="$(arg steps)" />
+			<param name="distance" value="$(arg distance)" />
+		</node>
 
 		<!-- controller module  -->
 		<node name="controller" pkg="carla_circle" type="controller.py" output="screen">
 			<param name="rolename" value="$(arg rolename)" />
 			<param name="time_step" value="$(arg time_step)" />
 			<param name="ctrl_freq" value="100" />
-			<param name="str_prop" value="1" />
+			<param name="str_prop" value="0.55" />
 			<param name="plan_steps" value="10" />
+			<param name="plan_steps" value="$(arg plan_steps)" />
 		</node>
 
 		<node name="viz_node" pkg="carla_circle" type="visualization_node.py" output="screen" />
+
+		<node name="msl_ego_vehicle" pkg="carla_circle" type="msl_ego_vehicle.py" output="screen">
+			<param name="vehicle_filter" value="vehicle.toyota.*" />
+			<param name="rolename" value="$(arg rolename)" />
+			<rosparam param="spawn_point" subst_value="True">$(arg spawn_point)</rosparam>
+			<param name="color" value="$(arg color)" />
+		</node>
 	</group>
-
-
 
 </launch>

@@ -67,7 +67,9 @@ class MapUpdater:
         self.distance = rospy.get_param("~distance")     # distance between two waypoints
         freq = rospy.get_param("~update_frequency")
         exit_time = rospy.get_param("~exit_time")
-
+        self.max_speed = rospy.get_param("~max_speed")
+        self.opp_speed = rospy.get_param("~opp_speed")
+        self.plan_horizon = rospy.get_param("~plan_horizon")
 
         # state information
         self.stateReady = False
@@ -82,7 +84,7 @@ class MapUpdater:
         self.ado_track_info = Path()
 
         # service proxy to get a path update from carla world
-        rospy.wait_for_service("get_path")
+        rospy.wait_for_service("get_path", 1)
         self.get_path_handle = rospy.ServiceProxy('get_path', GetAvailablePath)
 
         # subscribers, publishers
@@ -111,14 +113,16 @@ class MapUpdater:
             self.ado_stateReady = True
 
     def get_path_from_position(self, position_x, position_y):
-
         track_center = np.zeros((2, self.steps))
         track_width = 5.0
         if abs(position_x) < 25 and abs(position_y) < 25:
-            pos_the = np.arctan2(position_y, position_x)
-            the = np.linspace(pos_the-0.6, pos_the - 0.6 + np.pi, self.steps)
-
             radius = 21.75
+            pos_the = np.arctan2(position_y, position_x)
+            the_start = pos_the - 0.2
+            angle = 2.0*self.max_speed*self.plan_horizon/radius
+            the_end = the_start + angle
+            the = np.linspace(the_start, the_end, self.steps)
+
             for i in range(self.steps):
                 track_center[:,i] = [radius*np.cos(the[i])-0.5, radius*np.sin(the[i])-0.5]
 
@@ -154,12 +158,14 @@ class MapUpdater:
         self.ego_track_info.header.stamp = rospy.Time.now()
         self.ego_track_info.header.frame_id = "map"
         self.ego_track_info.poses = []
+
         for i in range(self.steps):
             pose_s = PoseStamped()
             pose_s.header = self.ego_track_info.header
             pose_s.pose.position.x = track_c[0,i]
             pose_s.pose.position.y = track_c[1,i]
             self.ego_track_info.poses.append(pose_s)
+
         # append the track width info as the last element of path.poses
         track_w_pose = PoseStamped()
         track_w_pose.header = self.ego_track_info.header
@@ -168,35 +174,30 @@ class MapUpdater:
 
     def update_ado_track(self):
         ado_pos = self.ado_state.get_position()
-        # if ado_pos[1] > 60:
-        #     self.ado_track_info = Path()
+        # current_pose = Pose()
+        # current_pose.position.x = ado_pos[0]
+        # current_pose.position.y = ado_pos[1]
+        # try:
+        #     track_width = 3.2
+        #     track_center = np.zeros((2, self.steps))
+        #     path_list_resp = self.get_path_handle(current_pose)
+        #     # path = path_list_resp.paths.paths[0]
+        #     path = random.choice(path_list_resp.paths.paths)     # choose a random path
+        #     # print("This is our believed path", path)
+        #     for i in range(self.steps - 2):
+        #         track_center[0,i+2] = path.poses[i].pose.position.x
+        #         track_center[1,i+2] = path.poses[i].pose.position.y
+        #     track_center[0, 1] = 2*track_center[0, 2] - track_center[0, 3]
+        #     track_center[1, 1] = 2*track_center[1, 2] - track_center[1, 3]
+        #     track_center[0, 0] = 2*track_center[0, 1] - track_center[0, 2]
+        #     track_center[1, 0] = 2*track_center[1, 1] - track_center[1, 2]
+        # except rospy.ServiceException, e:
+        #     print "Service call failed: %s"%e
 
+        # track_c = track_center
+        # track_w = track_width
 
-
-        current_pose = Pose()
-        current_pose.position.x = ado_pos[0]
-        current_pose.position.y = ado_pos[1]
-        try:
-            track_width = 3.2
-            track_center = np.zeros((2, self.steps))
-            path_list_resp = self.get_path_handle(current_pose)
-            # path = path_list_resp.paths.paths[0]
-            path = random.choice(path_list_resp.paths.paths)     # choose a random path
-            # print(" this is our beloved path", path)
-            for i in range(self.steps - 2):
-                track_center[0,i+2] = path.poses[i].pose.position.x
-                track_center[1,i+2] = path.poses[i].pose.position.y
-            track_center[0, 1] = 2*track_center[0, 2] - track_center[0, 3]
-            track_center[1, 1] = 2*track_center[1, 2] - track_center[1, 3]
-            track_center[0, 0] = 2*track_center[0, 1] - track_center[0, 2]
-            track_center[1, 0] = 2*track_center[1, 1] - track_center[1, 2]
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
-
-        track_c = track_center
-        track_w = track_width
-
-        # track_c, track_w = self.get_path_from_position(ado_pos[0], ado_pos[1])
+        track_c, track_w = self.get_path_from_position(ado_pos[0], ado_pos[1])
         self.ado_track_info.header.stamp = rospy.Time.now()
         self.ado_track_info.header.frame_id = "map"
         self.ado_track_info.poses = []

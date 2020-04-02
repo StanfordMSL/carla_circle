@@ -121,15 +121,21 @@ class AckermannController:
 
             # pick target w/o collision avoidance, closest point on the traj and one point ahead
             _, idx = self.path_tree.query([pos_x, pos_y])
-            if idx < self.traj_steps - 2:
-                target_pt = self.path_tree.data[idx + 2, :]
-                target_vel = self.vel_path[idx + 2, :]
+            # Target point for steering
+            if idx < self.traj_steps - 3:
+                target_pt = self.path_tree.data[idx + 3, :]
                 # str_idx = idx + 2
             else:
                 target_pt = self.path_tree.data[-1, :]
-                target_vel = self.vel_path[-1, :]
                 # str_idx = self.vel_path.shape[0] - 1
                 print("CONTROLLER: at the end of the desired waypoits!!!")
+            # Target point for velocity
+            if idx < self.traj_steps:
+                target_vel = self.vel_path[idx, :]
+                # str_idx = idx + 2
+            else:
+                target_vel = self.vel_path[-1, :]
+                # str_idx = self.vel_path.shape[0] - 1
 
             target_speed = np.linalg.norm(target_vel)
 
