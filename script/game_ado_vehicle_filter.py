@@ -74,7 +74,7 @@ class GameAdoCarFilter(object):
             # get rid of ego vehicle
             car_pos = [object.pose.position.x, object.pose.position.y]    # position of the car we are interested in
             dis = np.linalg.norm([car_pos[0] - pos_x, car_pos[1] - pos_y])
-            if dis < 0.5:
+            if dis < 1.5:
                 return False, 0, 0
 
             if np.linalg.norm(car_pos) <= 5:

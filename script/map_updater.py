@@ -84,7 +84,7 @@ class MapUpdater:
         self.ado_track_info = Path()
 
         # service proxy to get a path update from carla world
-        rospy.wait_for_service("get_path", 1)
+        rospy.wait_for_service("get_path", 8.0)
         self.get_path_handle = rospy.ServiceProxy('get_path', GetAvailablePath)
 
         # subscribers, publishers

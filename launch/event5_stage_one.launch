@@ -5,9 +5,9 @@
 	<arg name="rolename" default="stanford_ego" />
 	<arg name="host" default="localhost" />
 	<arg name="port" default="2000" />
-	<arg name="max_speed" default="5.0" />
-	<arg name="opp_speed" default="5.0" />
-	<arg name="plan_horizon" default="5.0" />
+	<arg name="max_speed" default="7.5" />
+	<arg name="opp_speed" default="8.0" />
+	<arg name="plan_horizon" default="3.0" />
 	<arg name="plan_steps" default="10" />
 
 	<!-- bridge -->
@@ -21,6 +21,8 @@
 
 	<include file="$(find carla_circle)/launch/car_simulation.launch">
 		<arg name="rolename" value="$(arg rolename)" />
+		<arg name="color" value="255, 0, 0" />
+		<arg name="spawn_point" value="[-3.0, -50.0, 2.0, 90.0]" />
 		<arg name="max_speed" value="$(arg max_speed)" />
 		<arg name="opp_speed" value="$(arg opp_speed)" />
 		<arg name="plan_horizon" value="$(arg plan_horizon)" />
