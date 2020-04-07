@@ -3,10 +3,12 @@
 <launch>
 
 	<arg name="rolename" default="stanford_ego" />
+	<arg name="host" default="localhost" />
+	<arg name="port" default="2000" />
 	<arg name="steps" default="20" />
 	<arg name="distance" default="4.0" />
 	<arg name="color" default="255, 200, 200" />
-	<arg name="spawn_point" default="[-6.0, -40.0, 2.0, 90.0]" />
+	<arg name="spawn_point" default="-6.0, -40.0, 2.0, 0.0, 0.0, 270.0" />
 	<arg name="max_speed" default="5.0" />
 	<arg name="opp_speed" default="5.0" />
 	<arg name="plan_horizon" default="5.0" />
@@ -53,12 +55,14 @@
 
 		<node name="viz_node" pkg="carla_circle" type="visualization_node.py" output="screen" />
 
-		<node name="msl_ego_vehicle" pkg="carla_circle" type="msl_ego_vehicle.py" output="screen">
-			<param name="vehicle_filter" value="vehicle.toyota.*" />
-			<param name="rolename" value="$(arg rolename)" />
-			<rosparam param="spawn_point" subst_value="True">$(arg spawn_point)</rosparam>
+		<include file="$(find carla_ego_vehicle)/launch/carla_example_ego_vehicle.launch">
+			<arg name='host' value='$(arg host)'/>
+			<arg name='port' value='$(arg port)'/>
+			<arg name="vehicle_filter" value='vehicle.toyota.*'/>
+			<arg name='role_name' value='$(arg rolename)'/>
+			<arg name="spawn_point" value="$(arg spawn_point)"/>
 			<param name="color" value="$(arg color)" />
-		</node>
+		</include>
 	</group>
 
 </launch>
