@@ -21,8 +21,6 @@
 
 	<include file="$(find carla_circle)/launch/car_simulation.launch">
 		<arg name="rolename" value="$(arg rolename)" />
-		<arg name="host" value="$(arg host)" />
-		<arg name="port" value="$(arg port)" />
 		<arg name="color" value="255, 0, 0" />
 		<arg name="spawn_point" default="-3.0, -50.0, 2.0, 0.0, 0.0, 270.0" />
 		<arg name="max_speed" value="$(arg max_speed)" />

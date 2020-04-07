@@ -3,8 +3,6 @@
 <launch>
 
 	<arg name="rolename" default="stanford_ego" />
-	<arg name="host" default="localhost" />
-	<arg name="port" default="2000" />
 	<arg name="steps" default="20" />
 	<arg name="distance" default="4.0" />
 	<arg name="color" default="255, 200, 200" />
@@ -55,14 +53,14 @@
 
 		<node name="viz_node" pkg="carla_circle" type="visualization_node.py" output="screen" />
 
-		<include file="$(find carla_ego_vehicle)/launch/carla_example_ego_vehicle.launch">
-			<arg name='host' value='$(arg host)'/>
-			<arg name='port' value='$(arg port)'/>
-			<arg name="vehicle_filter" value='vehicle.toyota.*'/>
-			<arg name='role_name' value='$(arg rolename)'/>
-			<arg name="spawn_point" value="$(arg spawn_point)"/>
-			<param name="color" value="$(arg color)" />
-		</include>
+		<node pkg="carla_ego_vehicle" type="carla_ego_vehicle.py" name="carla_ego_vehicle_$(arg rolename)" output="screen">
+			<param name="sensor_definition_file" value="$(find carla_circle)/resource/no_sensors.json"/>
+			<param name="vehicle_filter" value="vehicle.toyota.*"/>
+			<param name="role_name" value="$(arg rolename)"/>
+			<param name="spawn_point" value="$(arg spawn_point)"/>
+			<param name="spawn_ego_vehicle" value="True"/>
+			<param name="color" value="$(arg color)"/>
+		</node>
 	</group>
 
 </launch>
