@@ -63,4 +63,9 @@
 		</node>
 	</group>
 
+	<!-- Ackermann control for the vehicle-->
+	<include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch">
+		<arg name="role_name" value="$(arg rolename)" />
+	</include>
+
 </launch>

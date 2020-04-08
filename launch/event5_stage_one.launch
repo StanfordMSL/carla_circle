@@ -41,9 +41,4 @@
 		<arg name="plan_steps" value="$(arg plan_steps)" />
 	</include>
 
-	<!-- Ackermann control for the vehicle-->
-	<include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch">
-		<arg name="role_name" value="$(arg rolename)" />
-	</include>
-
 </launch>
