@@ -18,12 +18,13 @@
 		<!-- start service call for game node  -->
 		<node name="restart_call" pkg="carla_circle" type="game_start_client.py" output="screen" />
 
-		<!-- "perception module", acutally just filtering out cars that are relevant -->
+		<!-- "Perception" node - currently filters out vehicles outside ROI-->
 		<node name="game_ado_car_filter" pkg="carla_circle" type="game_ado_vehicle_filter.py" output="screen">
 			<param name="rolename" value="$(arg rolename)" />
 		</node>
 
-		<!-- this node works for game planner to publish current track center and track width for two cars -->
+		<!-- Planner node - works for game planner to publish current track
+			center and track width for two cars -->
 		<node name="map_updater" pkg="carla_circle" type="map_updater.py" output="screen">
 			<param name="steps" value="$(arg steps)" />
 			<param name="distance" value="$(arg distance)" />
@@ -40,7 +41,7 @@
 			<param name="distance" value="$(arg distance)" />
 		</node>
 
-		<!-- controller module  -->
+		<!-- Controller node -->
 		<node name="controller" pkg="carla_circle" type="controller.py" output="screen">
 			<param name="rolename" value="$(arg rolename)" />
 			<param name="time_step" value="$(arg time_step)" />
@@ -51,15 +52,17 @@
 			<param name="max_speed" value="$(arg max_speed)" />
 		</node>
 
+		<!-- Visualization node-->
 		<node name="viz_node" pkg="carla_circle" type="visualization_node.py" output="screen" />
 
+		<!-- Carla ego vehicle node -->
 		<node pkg="carla_ego_vehicle" type="carla_ego_vehicle.py" name="carla_ego_vehicle_$(arg rolename)" output="screen">
-			<param name="sensor_definition_file" value="$(find carla_circle)/resource/no_sensors.json"/>
-			<param name="vehicle_filter" value="vehicle.toyota.*"/>
-			<param name="role_name" value="$(arg rolename)"/>
-			<param name="spawn_point" value="$(arg spawn_point)"/>
-			<param name="spawn_ego_vehicle" value="True"/>
-			<param name="color" value="$(arg color)"/>
+			<param name="sensor_definition_file" value="$(find carla_circle)/resource/no_sensors.json" />
+			<param name="vehicle_filter" value="vehicle.toyota.*" />
+			<param name="role_name" value="$(arg rolename)" />
+			<param name="spawn_point" value="$(arg spawn_point)" />
+			<param name="spawn_ego_vehicle" value="True" />
+			<param name="color" value="$(arg color)" />
 		</node>
 	</group>
 
