@@ -38,10 +38,13 @@ class GameAdoCarFilter(object):
         # -----------------
         # subscriber, publisher and timer
         # -------------------
-        rospy.Subscriber("/carla/nearby_obj", ObjectArray, self.nearby_car_cb)
+        rospy.Subscriber(
+            "/carla/" + rolename + "/objects",
+            ObjectArray,
+            self.nearby_car_cb
+        )
         rospy.Subscriber("/carla/" + rolename + "/odometry", Odometry, self.ego_vehicle_cb)
         # publisher for relevant cars
-        self.relevant_pub = rospy.Publisher("/carla/relevant_obj", ObjectArray, queue_size=10)
         self.marker_pub = rospy.Publisher("/carla/viz/relevant_obj", MarkerArray, queue_size=10)
         # publishers for ego and opponent for game planner
         self.ego_odom_pub = rospy.Publisher("MSLcar0/ground_truth/odometry", Odometry, queue_size=10)
@@ -71,18 +74,14 @@ class GameAdoCarFilter(object):
             # return if the object is relevant, if relevant, return its relative position (ahead, behind), and distance
             # 0 means behind, 1 means in front of us
 
-            # get rid of ego vehicle
-            car_pos = [object.pose.position.x, object.pose.position.y]    # position of the car we are interested in
-            dis = np.linalg.norm([car_pos[0] - pos_x, car_pos[1] - pos_y])
-            if dis < 1.5:
-                return False, 0, 0
+            # position of the car we are interested in
+            car_pos = [object.pose.position.x, object.pose.position.y]
 
             if np.linalg.norm(car_pos) <= 5:
                 return False, 0, 0
 
             # first filter based on the orientation of car
             # if going out of a circle, then not relevant
-
             quat = (object.pose.orientation.x,
                         object.pose.orientation.y,
                         object.pose.orientation.z,
@@ -194,10 +193,17 @@ class GameAdoCarFilter(object):
             ori_euler = tf.transformations.euler_from_quaternion(ori_quat)
             yaw = ori_euler[2]
             for obj in self.nearby_obj.objects:
-                bool_rel, rel_pos, dist = relevant_filter(self.ego_odom.pose.pose.position.x, self.ego_odom.pose.pose.position.y, yaw, obj)
+                bool_rel, rel_pos, dist = relevant_filter(
+                    self.ego_odom.pose.pose.position.x,
+                    self.ego_odom.pose.pose.position.y,
+                    yaw,
+                    obj
+                )
+
                 if bool_rel:
                     # the obj is relevant
                     relevant_msg.objects.append(obj)
+
                     if rel_pos == 1:
                         if dist < ahead_distance:
                             ahead_distance = dist
@@ -207,9 +213,6 @@ class GameAdoCarFilter(object):
                             behind_distance = dist
                             behind_closest_obj = obj
 
-            # relevant_msg.objects = [obj for obj in self.nearby_obj.objects \
-            #                 if relevant_filter(self.ego_odom.pose.pose.position.x, self.ego_odom.pose.pose.position.y, yaw, obj)]
-            self.relevant_pub.publish(relevant_msg)
             # visualization
             color_relevant = ColorRGBA()
             color_relevant.r = 0
