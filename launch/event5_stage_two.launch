@@ -26,7 +26,7 @@
 	<include file="$(find carla_circle)/launch/car_simulation.launch">
 		<arg name="rolename" value="$(arg rolename1)" />
 		<arg name="color" value="255, 0, 0" />
-		<arg name="spawn_point" value="[-3.0, -50.0, 2.0, 90.0]" />
+		<arg name="spawn_point" value="-3.0, -50.0, 2.0, 0.0, 0.0, 270.0" />
 		<arg name="max_speed" value="$(arg ego1_vel)" />
 		<arg name="opp_speed" value="$(arg opp_vel)" />
 		<arg name="plan_horizon" value="$(arg plan_horizon)" />
@@ -52,16 +52,6 @@
 		<arg name="opp_vel" value="$(arg opp_vel)" />
 		<arg name="plan_horizon" value="$(arg plan_horizon)" />
 		<arg name="plan_steps" value="$(arg plan_steps)" />
-	</include>
-
-	<!-- Ackermann controls for the vehicles-->
-	<include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch">
-		<arg name="role_name" value="$(arg rolename1)" />
-		<arg name="delay" value="10.0" />
-	</include>
-	<include file="$(find carla_ackermann_control)/launch/carla_ackermann_control.launch">
-		<arg name="role_name" value="$(arg rolename2)" />
-		<arg name="delay" value="1.0" />
 	</include>
 
 </launch>
