@@ -1,13 +1,6 @@
 #!/usr/bin/env python
 # author: mingyuw@stanford.edu
 
-"""
-this node publishes the following information
-** for 2-person game theoretic planner **
-there is only one "ado/opponent" vehicle considered by the game theoretic planner
-1. one relevant vehicle as derived_object_msgs and odometry information
-2. marker of relevant vehicle for visualiation
-"""
 import rospy
 import tf
 from nav_msgs.msg import Odometry
@@ -19,73 +12,153 @@ import numpy as np
 import math
 import random
 
-
 class GameAdoCarFilter(object):
+    '''
+    This filter determines the relevant ado, opponent, object for the ego
+    vehicle's game plan. The filter is based on a game theoretic planner model
+    for two players. Therefore, there is only one "ado/opponent" object
+    considered during planning. The node publishes:
+        1. One relevant object with "derived_object_msgs" and "odometry"
+        2. A marker of the relevant object for visualization
+    '''
     def __init__(self):
+        '''
+        Initializes the class.
+        
+        Note: If self.enable_lane_filter is set to true, the filter will take
+        into account the lane in which the ado object is present.
+        '''
         rospy.init_node("gameAdoCarFilter", anonymous=True)
 
-        # -----------------
-        # setup attributes for class
-        # -------------------
+        # Initialization of class attribute
         self.ego_odom = Odometry()
         self.nearby_obj = ObjectArray()
         self.ego_ready = False
         self.nearby_ready = False
-        self.enable_lane_filter = True     # if true, then only vehicles entering in the inner lane
-                                           # will be considered
+        self.enable_lane_filter = True
 
+        # Subscribers for ego vehicle odometry and Carla objects
         rolename = rospy.get_param("~rolename")
-        # -----------------
-        # subscriber, publisher and timer
-        # -------------------
         rospy.Subscriber(
             "/carla/" + rolename + "/objects",
             ObjectArray,
             self.nearby_car_cb
         )
-        rospy.Subscriber("/carla/" + rolename + "/odometry", Odometry, self.ego_vehicle_cb)
-        # publisher for relevant cars
-        self.marker_pub = rospy.Publisher("/carla/viz/relevant_obj", MarkerArray, queue_size=10)
-        # publishers for ego and opponent for game planner
-        self.ego_odom_pub = rospy.Publisher("MSLcar0/ground_truth/odometry", Odometry, queue_size=10)
-        self.opp_odom_pub = rospy.Publisher("MSLcar1/ground_truth/odometry", Odometry, queue_size=10)
-        self.ado_marker_pub = rospy.Publisher("/carla/viz/game_ado_obj", MarkerArray, queue_size=10)
+        rospy.Subscriber(
+            "/carla/" + rolename + "/odometry", Odometry,
+            self.ego_vehicle_cb
+        )
 
-        # update timer
+        # Publishers for odometry of ego and opponent
+        self.ego_odom_pub = rospy.Publisher(
+            "MSLcar0/ground_truth/odometry",
+            Odometry,
+            queue_size=10
+        )
+        self.opp_odom_pub = rospy.Publisher(
+            "MSLcar1/ground_truth/odometry",
+            Odometry,
+            queue_size=10
+        )
+
+        # Publishers for visualization of relevant objects
+        self.marker_pub = rospy.Publisher(
+            "/carla/viz/relevant_obj",
+            MarkerArray,
+            queue_size=10
+        )
+        self.ado_marker_pub = rospy.Publisher(
+            "/carla/viz/game_ado_obj",
+            MarkerArray,
+            queue_size=10
+        )
+
+        # Class timer
         self.timer = rospy.Timer(rospy.Duration(0.1), self.timer_cb)
 
+
     def ego_vehicle_cb(self, msg):
+        '''
+        This is a callback for the ego vehicle that fills out the ego vehicle's
+        odometry information and set the ego_ready variable.
+        
+        Parameters
+        ----------
+        msg : Odometry
+            The odometry information of the ego vehicle.
+        '''
         self.ego_odom = msg
+
         if not self.ego_ready:
             self.ego_ready = True
 
+
     def nearby_car_cb(self, msg):
+        '''
+        This is a callback that fills out the nearby objects for the ego vehicle
+        and set the nearby_ready variable.
+        
+        Parameters
+        ----------
+        msg : ObjectArray
+            An array of all Carla vehicles and pedestrians in the scene,
+            excluding the ego vehicle's object.
+        '''
         self.nearby_obj = msg
+
         if not self.nearby_ready:
             self.nearby_ready = True
 
+
     def timer_cb(self, event):
         '''
-        if object is relevant given position of ego car at (pos_x, pos_y)
-        returns True, else returns False
+        This is a callback for the class timer, which will be called every tick.
+        The callback will filter out objects not relevant to the ego vehicle and
+        publish to the ROS topics defined in the class.
+        
+        Parameters
+        ----------
+        event : rospy.TimerEvent
+            The timer's tick event.
         '''
-
         def relevant_filter(pos_x, pos_y, yaw, object):
-            # return if the object is relevant, if relevant, return its relative position (ahead, behind), and distance
-            # 0 means behind, 1 means in front of us
-
-            # position of the car we are interested in
+            '''
+            Determines if the object is in the circle and relevant to the
+            current ego position.
+            
+            Parameters
+            ----------
+            pos_x : float64
+                The x location of the ego vehicle.
+            pos_y : float64
+                The y location of the ego vehicle.
+            yaw : float64
+                The yaw, heading, of the ego vehicle.
+            object : derived_object_msgs.Object
+                The converted Carla object.
+            
+            Returns
+            -------
+            bool, int, float
+                A tuple containing the information about the provided object.
+                Specifically, whether the object is relevant, its location
+                (in front, 1, or behind, 0) and distance [meters], all with
+                respect to the ego vehicle.
+            '''
+            # Position of the object of interest
             car_pos = [object.pose.position.x, object.pose.position.y]
 
+            # If position is too far from circle center, ignore
             if np.linalg.norm(car_pos) <= 5:
                 return False, 0, 0
 
-            # first filter based on the orientation of car
-            # if going out of a circle, then not relevant
-            quat = (object.pose.orientation.x,
-                        object.pose.orientation.y,
-                        object.pose.orientation.z,
-                        object.pose.orientation.w)
+            # Orientation of object
+            quat = (
+                object.pose.orientation.x,
+                object.pose.orientation.y,
+                object.pose.orientation.z,
+                object.pose.orientation.w
+            )
             car_yaw = tf.transformations.euler_from_quaternion(quat)[2]
             ori_car = [np.cos(car_yaw), np.sin(car_yaw)]
             ori_circle = [-car_pos[0], -car_pos[1]]
@@ -96,33 +169,60 @@ class GameAdoCarFilter(object):
             # print(" this is ori car ", ori_car)
             # print(" this is ori circle ", ori_circle)
             # print("this is rel ang ", rel_ang)
+
+            # If object is facing away from circle (exiting), ignore
             if rel_ang <= -0.3:
                 return False, 0, 0
 
-            # then, filter based on position
-            # according to the position and orientation of ego vehicle, cars not too far behind/ in front are relevant
-            ori_ego = [np.cos(yaw), np.sin(yaw)]      # unit vector representation of orientation of the ego car
-            ori_rel = [car_pos[0] - pos_x, car_pos[1] - pos_y]       # relative position of obj w.r.t ego car
-            distance_tangent = np.dot(ori_rel, ori_ego)      # distance along the orientation of ego car
+            # Unit vector representation of ego heading
+            ori_ego = [np.cos(yaw), np.sin(yaw)]
+            # Relative position of object w.r.t ego vehicle
+            ori_rel = [car_pos[0] - pos_x, car_pos[1] - pos_y]
+            # Distance from object along the heading of ego car
+            distance_tangent = np.dot(ori_rel, ori_ego)
+            # Distance from object along normal of the ego car heading
             distance_normal = np.dot(ori_rel, [ori_ego[1], -ori_ego[0]])
-            if distance_tangent > -15 and distance_tangent < 25 and abs(distance_normal) < 25:
-                if distance_tangent > 0:
+
+            # Object's relative postion is relevant
+            if (
+                distance_tangent > -15 and
+                distance_tangent < 25 and 
+                abs(distance_normal) < 25
+            ):
+                if distance_tangent > 0: # Object is in front
                     return True, 1, np.linalg.norm(ori_rel)
-                else:
+                else: # Object is behind
                     return True, 0, np.linalg.norm(ori_rel)
 
+            # Object is in the circle, but not relevant to ego location 
             return False, 0, 0
 
         def relevant_filter_entrance(pos_x, pos_y, object):
-            # relevant car: cars entering the circle through the entrance in front of us
+            '''
+            Determines if the object is trying to enter the circle and relevant
+            to the current ego position. The filter will take into account
+            whether the object is ahead of the ego and whether to base its
+            relevancy on the object's current lane.
+            
+            Parameters
+            ----------
+            pos_x : float64
+                The x location of the ego vehicle.
+            pos_y : float64
+                The y location of the ego vehicle.
+            object : derived_object_msgs.Object
+                The converted Carla object.
+            
+            Returns
+            -------
+            bool
+                Whether the object is relevant to the ego vehicle.
+            '''
             pos_car = [object.pose.position.x, object.pose.position.y]
+
             if not self.enable_lane_filter:
-                '''
-                does not filter relevant vehicles based on their lane
-                '''
                 if pos_x > 0 and pos_y < 0:
                     if (pos_car[0] > 15 and pos_car[1] > 0):
-                    # if (pos_car[0] > 0 and pos_car[1] < -20) or (pos_car[0] > 20 and pos_car[1] > 0):
                         return True
                     return False
                 elif pos_x > 0 and pos_y >= 0:
@@ -137,61 +237,73 @@ class GameAdoCarFilter(object):
                     if pos_car[0] > 0 and pos_car[1] < -20:
                         return True
                     return False
-            else:
-                '''
-                filter vehicles based on their lane number
-                currently, using road geometry, should be changed to based on closest waypoint information
-                '''
+            else: #TODO: Update to use waypoint information
                 if pos_x > 0 and pos_y < 0:
                     if (pos_car[0] > 15 and pos_car[1] > 0 and pos_car[1] < 7):
-                    # if (pos_car[0] > 0 and pos_car[1] < -20) or (pos_car[0] > 20 and pos_car[1] > 0):
                         return True
                     return False
                 elif pos_x > 0 and pos_y >= 0:
-                    if (pos_car[0] < 0 and pos_car[0] > -6 and pos_car[1] > 15)\
-                            or (pos_car[0] < -5 and pos_car[0] > -10 and pos_car[1] > 20 and pos_car[1] < 25):
+                    if (
+                        (
+                            pos_car[0] < 0 and
+                            pos_car[0] > -6 and
+                            pos_car[1] > 15
+                        ) or
+                        (
+                            pos_car[0] < -5 and
+                            pos_car[0] > -10 and
+                            pos_car[1] > 20 and
+                            pos_car[1] < 25
+                        )
+                    ):
                         return True
                     return False
                 elif pos_x <= 0 and pos_y >= 0:
-                    # if (pos_car[0] < -20 and pos_car[1]< 0):
-                    #     return True
                     return False
                 else:
-                    if (pos_car[0] > 0 and pos_car[0] < 5 and pos_car[1] < -20) \
-                            or (pos_car[0] > 5 and pos_car[0] < 10 and pos_car[1] < -20 and pos_car[1] > -25):
+                    if (
+                        (
+                            pos_car[0] > 0 and
+                            pos_car[0] < 5 and 
+                            pos_car[1] < -20
+                        ) or
+                        (
+                            pos_car[0] > 5 and
+                            pos_car[0] < 10 and
+                            pos_car[1] < -20 and
+                            pos_car[1] > -25
+                        )
+                    ):
                         return True
+
                     return False
 
         if self.ego_ready and self.nearby_ready:
-            # ------------------------------
-            #  publish ego odometry
-            # ------------------------------
             self.ego_odom_pub.publish(self.ego_odom)
 
-            # ------------------------------
-            #  publish relevant car objectarray_msg and visualization
-            #  also save the car closest to us (in front of us and behind us, respectively)
-            # ------------------------------
             ahead_distance = 100
             behind_distance = 100
             front_closest_obj = None
             behind_closest_obj = None
 
-
-
             header = Header()
             header.stamp = rospy.Time.now()
             header.frame_id = 'map'
+
             relevant_msg = ObjectArray()
             relevant_msg.header = header
             relevant_msg.objects = []
 
-            ori_quat = (self.ego_odom.pose.pose.orientation.x,
-                        self.ego_odom.pose.pose.orientation.y,
-                        self.ego_odom.pose.pose.orientation.z,
-                        self.ego_odom.pose.pose.orientation.w)
+            ori_quat = (
+                self.ego_odom.pose.pose.orientation.x,
+                self.ego_odom.pose.pose.orientation.y,
+                self.ego_odom.pose.pose.orientation.z,
+                self.ego_odom.pose.pose.orientation.w
+            )
             ori_euler = tf.transformations.euler_from_quaternion(ori_quat)
             yaw = ori_euler[2]
+
+            # For each object nearby, check if relevant and store.
             for obj in self.nearby_obj.objects:
                 bool_rel, rel_pos, dist = relevant_filter(
                     self.ego_odom.pose.pose.position.x,
@@ -201,7 +313,6 @@ class GameAdoCarFilter(object):
                 )
 
                 if bool_rel:
-                    # the obj is relevant
                     relevant_msg.objects.append(obj)
 
                     if rel_pos == 1:
@@ -213,29 +324,27 @@ class GameAdoCarFilter(object):
                             behind_distance = dist
                             behind_closest_obj = obj
 
-            # visualization
+            # Visualization of all relevant objects
             color_relevant = ColorRGBA()
             color_relevant.r = 0
             color_relevant.g = 0
             color_relevant.b = 1
             color_relevant.a = 0.5
-            self.viz_cars(relevant_msg.objects, header, color_relevant, self.marker_pub)
+            self.viz_cars(
+                relevant_msg.objects,
+                header,
+                color_relevant,
+                self.marker_pub
+            )
 
-
-            # ----------------------
-            # publish only one game opponent car
-            # ** if there are multiple relevant cars, then randomly pick one
-            # ** if there is no relevant cars, fake one far away
-            # ----------------------
+            # Determine the current opponent. Default to closest relevant front
+            # object, then closest relevant behind object, otherwise create
+            # ghost opponent far from the circle.
             if front_closest_obj:
                 ado_object = front_closest_obj
-                # ado_object = random.choice(relevant_msg.objects)
-
             elif behind_closest_obj:
                 ado_object = behind_closest_obj
-
             else:
-                # if there is no relevant car as opponent, then make up one
                 ado_object = Object()
                 ado_object.header.stamp = rospy.Time.now()
                 ado_object.header.frame_id = "map"
@@ -259,6 +368,7 @@ class GameAdoCarFilter(object):
 
             self.opp_odom_pub.publish(ado_odom)
 
+            # Visualization of current opponent
             color_opp = ColorRGBA()
             color_opp.r = 1
             color_opp.g = 0
@@ -267,15 +377,24 @@ class GameAdoCarFilter(object):
             self.viz_cars([ado_object], header, color_opp, self.ado_marker_pub)
 
 
-
-
-
-
-
     def viz_cars(self, obj_list, header, color_rgba, publisher):
-
+        '''
+        Publish objects to the provied rviz publisher.
+        
+        Parameters
+        ----------
+        obj_list : [Objects]
+            The list of Objects that should be visualized in rviz.
+        header : Header
+            The Header object containing the current ROS time and frame id.
+        color_rgba : ColorRGBA
+            The color in which the objects should be visualized.
+        publisher : rospy.Publisher
+            The ROS Publisher in which to publish the messages.
+        '''
         marker_msg = MarkerArray()
         count = 0
+
         for obj in obj_list:
             mk = Marker()
             mk.header = header
@@ -289,7 +408,9 @@ class GameAdoCarFilter(object):
             mk.lifetime = rospy.Duration(1)
             marker_msg.markers.append(mk)
             count += 1
+
         publisher.publish(marker_msg)
+
 
 if __name__ == '__main__':
     try:
