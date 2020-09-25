@@ -165,8 +165,7 @@ class GameAdoCarFilter(object):
             )
             car_yaw = tf.transformations.euler_from_quaternion(quat)[2]
             ori_car = [np.cos(car_yaw), np.sin(car_yaw)]
-            ori_circle = [-car_pos[0], -car_pos[1]]
-            ori_circle = ori_circle/np.linalg.norm(ori_circle)
+            ori_circle = np.negative(car_pos)/np.linalg.norm(car_pos)
             rel_ang = np.dot(ori_circle, ori_car)
 
             rospy.logdebug("Position of ado: {}".format(car_pos))
