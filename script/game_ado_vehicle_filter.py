@@ -39,6 +39,9 @@ class GameAdoCarFilter(object):
 
         # Subscribers for ego vehicle odometry and Carla objects
         rolename = rospy.get_param("~rolename")
+        rospy.loginfo_once(
+            "Initializing ado filter for '{}'".format(rolename)
+        )
         rospy.Subscriber(
             "/carla/" + rolename + "/objects",
             ObjectArray,
@@ -148,8 +151,9 @@ class GameAdoCarFilter(object):
             # Position of the object of interest
             car_pos = [object.pose.position.x, object.pose.position.y]
 
-            # If position is too far from circle center, ignore
+            # If position is too close to circle center, ignore
             if np.linalg.norm(car_pos) <= 5:
+                rospy.logdebug("Ado object %d in fountain.", object.id)
                 return False, 0, 0
 
             # Orientation of object
@@ -164,14 +168,16 @@ class GameAdoCarFilter(object):
             ori_circle = [-car_pos[0], -car_pos[1]]
             ori_circle = ori_circle/np.linalg.norm(ori_circle)
             rel_ang = np.dot(ori_circle, ori_car)
-            # print(" this is the position of car", car_pos)
-            # print(" this is yaw angle ", car_yaw)
-            # print(" this is ori car ", ori_car)
-            # print(" this is ori circle ", ori_circle)
-            # print("this is rel ang ", rel_ang)
+
+            rospy.logdebug("Position of ado: {}".format(car_pos))
+            rospy.logdebug("Heading/yaw of ado: {}".format(car_yaw))
+            rospy.logdebug("Global orientation: {}".format(ori_car))
+            rospy.logdebug("Circle orientation: {}".format(ori_circle))
+            rospy.logdebug("Relative heading: {}".format(rel_ang))
 
             # If object is facing away from circle (exiting), ignore
             if rel_ang <= -0.3:
+                rospy.logdebug("Ado object %d exiting the circle.", object.id)
                 return False, 0, 0
 
             # Unit vector representation of ego heading
@@ -189,12 +195,15 @@ class GameAdoCarFilter(object):
                 distance_tangent < 25 and 
                 abs(distance_normal) < 25
             ):
-                if distance_tangent > 0: # Object is in front
+                if distance_tangent > 0:
+                    rospy.logdebug("Ado object %d is in front.", object.id)
                     return True, 1, np.linalg.norm(ori_rel)
-                else: # Object is behind
+                else:
+                    rospy.logdebug("Ado object %d is behind.", object.id)
                     return True, 0, np.linalg.norm(ori_rel)
 
             # Object is in the circle, but not relevant to ego location 
+            rospy.logdebug("Ado object %d is not relevant.", object.id)
             return False, 0, 0
 
 
