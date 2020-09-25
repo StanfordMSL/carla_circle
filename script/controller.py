@@ -9,6 +9,7 @@ from ackermann_msgs.msg import AckermannDrive
 from visualization_msgs.msg import Marker
 
 from carla_msgs.msg import CarlaEgoVehicleControl
+from carla_msgs.msg import CarlaEgoVehicleInfo
 from scipy.spatial import KDTree
 import numpy as np
 import timeit
@@ -172,6 +173,13 @@ class AckermannController:
             queue_size=10
         )
 
+        topic = "/carla/{}/vehicle_info".format(rolename)
+        rospy.loginfo_once(
+            "Vehicle information for %s: %s",
+            rolename, 
+            rospy.wait_for_message(topic, CarlaEgoVehicleInfo)
+        )
+
         # Class timer
         self.ctrl_timer = rospy.Timer(
             rospy.Duration(1.0/ctrl_freq),
@@ -228,7 +236,6 @@ class AckermannController:
         event : rospy.TimerEvent
             The timer's tick event.
         '''
-        cmd_msg = AckermannDrive()
         current_time = rospy.get_time()
         # delta_t = current_time - self.time
         delta_t = self.time_step
@@ -236,11 +243,8 @@ class AckermannController:
         self.time = current_time
         jerk = 2.0
 
-        # cmd_msg.header.stamp = rospy.Time.now()
-        cmd_msg.steering_angle = 0.0
-        cmd_msg.steering_angle_velocity = 0.0
-        cmd_msg.speed = 0.0
-        cmd_msg.acceleration = 0.0
+        # Initializes the AckermannDrive message; All values 0 unless specified
+        cmd_msg = AckermannDrive()
         cmd_msg.jerk = jerk
 
         if self.pathReady and self.stateReady:
@@ -293,7 +297,7 @@ class AckermannController:
 
             cmd_msg.steering_angle = steer
             cmd_msg.speed = target_speed
-            cmd_msg.acceleration
+            cmd_msg.acceleration = acceleration
             cmd_msg.jerk = jerk
 
             # For visualization purposes and debuging control node
@@ -313,6 +317,21 @@ class AckermannController:
 
         # self.vehicle_cmd_pub.publish(vehicle_cmd_msg)
         self.command_pub.publish(cmd_msg)
+
+
+    def compute_ackermann_long_params(self, target_velocity):
+        desired_speed = 0.0
+        desired_acceleration = 0.0
+        desired_jerk = 0.0
+
+        # Calculate desired speed
+        desired_speed = np.linalg.norm(target_velocity)
+
+        # Calculate the desired acceleration
+        speed_diff = desired_speed - self.state.get_speed()
+        acceleration = abs(speed_diff) / (2.0 * self.time_step)
+
+        return (desired_speed, desired_acceleration, desired_jerk)
 
 
     def compute_ackermann_steer(self, target_pt):
