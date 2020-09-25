@@ -22,6 +22,7 @@ class odom_state(object):
         '''
         Initializes the class variables.
         '''
+        rospy.loginfo_once("Initializing odometry state.")
         self.time = None
         self.x = None
         self.y = None
@@ -55,11 +56,6 @@ class odom_state(object):
         self.vx = odom_msg.twist.twist.linear.x
         self.vy = odom_msg.twist.twist.linear.y
         self.speed = np.sqrt(self.vx**2 + self.vy**2)
-        # print(
-        #     "this is the current speed @ time",
-        #     self.speed,
-        #     self.time
-        # )
 
 
     def get_position(self):
@@ -131,6 +127,9 @@ class AckermannController:
         self.traj_steps = rospy.get_param("~plan_steps")
         ctrl_freq = rospy.get_param("~ctrl_freq")
         rolename = rospy.get_param("~rolename")
+        rospy.loginfo_once(
+            "Initializing Ackermann Controller for '{}'".format(rolename)
+        )
         self.steer_prev = 0.0
 
         # state information
@@ -254,45 +253,36 @@ class AckermannController:
             # Steering target. Three points ahead of closest point.
             if idx < self.traj_steps - 3:
                 target_pt = self.path_tree.data[idx + 3, :]
-                # str_idx = idx + 2
             else:
                 target_pt = self.path_tree.data[-1, :]
-                # str_idx = self.vel_path.shape[0] - 1
-                print("CONTROLLER: at the end of the desired waypoits!!!")
+                rospy.logwarn("At the end of the desired waypoints!")
 
             # Velocity target. Use the desired velocity from closest point.
             if idx < self.traj_steps:
                 target_vel = self.vel_path[idx, :]
-                # str_idx = idx + 2
             else:
                 target_vel = self.vel_path[-1, :]
-                # str_idx = self.vel_path.shape[0] - 1
 
             target_speed = np.linalg.norm(target_vel)
 
             speed_diff = target_speed - self.state.get_speed()
-            # pos_diff = target_pt - self.state.get_position()
-            # acceleration = cmd_msg.acceleration + 2.0*(
-            #     pos_diff/self.time_step**2.0 - speed_diff/self.time_step
-            # )
             acceleration = abs(speed_diff) / (2.0 * delta_t)
             cmd_msg.acceleration = np.min([1.5, acceleration])
             steer = self.compute_ackermann_steer(target_pt)
             
             steer_diff = abs(steer - self.steer_prev)
+            rospy.logdebug("Steering difference: %f", steer_diff)
 
             if steer_diff >= 0.3:
-                print("      0.3")
+                rospy.logdebug("Large difference; Use last steering command")
                 steer = self.steer_prev
             elif steer_diff >= 0.05:
-                print("          0.05")
                 acceleration = 0.0
                 target_speed = target_speed / 5.0
 
             self.steer_prev = steer
 
             if self.state.get_speed() - target_speed > 0.0:
-                # cmd_msg.acceleration = acceleration - 5
                 acceleration = -100.0
                 cmd_msg.speed = target_speed / 5.0
                 jerk = 1000.0
@@ -321,7 +311,6 @@ class AckermannController:
             mk_msg.color.b = 1
             self.tracking_pt_viz_pub.publish(mk_msg)
 
-
         # self.vehicle_cmd_pub.publish(vehicle_cmd_msg)
         self.command_pub.publish(cmd_msg)
 
@@ -345,7 +334,7 @@ class AckermannController:
         pos_x, pos_y, yaw = self.state.get_pose()
 
         if np.linalg.norm([target_pt[0] - pos_x, target_pt[1] - pos_y]) < 1:
-            print("target point too close!!!!!!!!")
+            rospy.logwarn("Steering target point too close!!!!!!!!")
             if self.steer_cache:
                 return self.steer_cache
             else:
