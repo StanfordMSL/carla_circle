@@ -197,6 +197,7 @@ class GameAdoCarFilter(object):
             # Object is in the circle, but not relevant to ego location 
             return False, 0, 0
 
+
         def relevant_filter_entrance(pos_x, pos_y, object):
             '''
             Determines if the object is trying to enter the circle and relevant
@@ -278,6 +279,7 @@ class GameAdoCarFilter(object):
 
                     return False
 
+
         if self.ego_ready and self.nearby_ready:
             self.ego_odom_pub.publish(self.ego_odom)
 
@@ -325,11 +327,7 @@ class GameAdoCarFilter(object):
                             behind_closest_obj = obj
 
             # Visualization of all relevant objects
-            color_relevant = ColorRGBA()
-            color_relevant.r = 0
-            color_relevant.g = 0
-            color_relevant.b = 1
-            color_relevant.a = 0.5
+            color_relevant = ColorRGBA(0.0, 0.0, 1.0, 0.5)
             self.viz_cars(
                 relevant_msg.objects,
                 header,
@@ -369,11 +367,7 @@ class GameAdoCarFilter(object):
             self.opp_odom_pub.publish(ado_odom)
 
             # Visualization of current opponent
-            color_opp = ColorRGBA()
-            color_opp.r = 1
-            color_opp.g = 0
-            color_opp.b = 0
-            color_opp.a = 1
+            color_opp = ColorRGBA(1.0, 0.0, 0.0, 1.0)
             self.viz_cars([ado_object], header, color_opp, self.ado_marker_pub)
 
 
