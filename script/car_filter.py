@@ -16,7 +16,6 @@ class CarFilter:
     def __init__(self):
         rospy.init_node("perception", anonymous=True)
         rospy.Subscriber("/carla/objects", ObjectArray, self.allcar_cb)
-        self.filter_pub = rospy.Publisher("/carla/nearby_obj", ObjectArray, queue_size=10)
         self.viz_pub = rospy.Publisher("/carla/viz/nearby_markers", MarkerArray, queue_size=10)
 
     def allcar_cb(self, objectarray_msg):
@@ -29,14 +28,13 @@ class CarFilter:
         msg = ObjectArray()
         msg.header = objectarray_msg.header
         msg.objects = [obj for obj in objectarray_msg.objects if valid_car(obj)]
-        self.filter_pub.publish(msg)
-
 
         viz_msg = MarkerArray()
         count = 0
+
         for obj in msg.objects:
             mk = Marker()
-            mk.header = objectarray_msg.header
+            mk.header = msg.header
             mk.type = Marker.CUBE
             mk.scale.x = 3.7
             mk.scale.y = 1.6
@@ -50,6 +48,7 @@ class CarFilter:
             mk.lifetime = rospy.Duration(1)
             viz_msg.markers.append(mk)
             count += 1
+
         self.viz_pub.publish(viz_msg)
 
 if __name__ == '__main__':
