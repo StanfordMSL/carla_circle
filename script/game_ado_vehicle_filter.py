@@ -9,8 +9,7 @@ from derived_object_msgs.msg import ObjectArray, Object
 from std_msgs.msg import Header, ColorRGBA
 
 import numpy as np
-import math
-import random
+
 
 class GameAdoCarFilter(object):
     '''
@@ -24,7 +23,7 @@ class GameAdoCarFilter(object):
     def __init__(self):
         '''
         Initializes the class.
-        
+
         Note: If self.enable_lane_filter is set to true, the filter will take
         into account the lane in which the ado object is present.
         '''
@@ -79,12 +78,11 @@ class GameAdoCarFilter(object):
         # Class timer
         self.timer = rospy.Timer(rospy.Duration(0.1), self.timer_cb)
 
-
     def ego_vehicle_cb(self, msg):
         '''
         This is a callback for the ego vehicle that fills out the ego vehicle's
         odometry information and set the ego_ready variable.
-        
+
         Parameters
         ----------
         msg : Odometry
@@ -95,12 +93,11 @@ class GameAdoCarFilter(object):
         if not self.ego_ready:
             self.ego_ready = True
 
-
     def nearby_car_cb(self, msg):
         '''
-        This is a callback that fills out the nearby objects for the ego vehicle
-        and set the nearby_ready variable.
-        
+        This is a callback that fills out the nearby objects for the ego
+        vehicle and set the nearby_ready variable.
+
         Parameters
         ----------
         msg : ObjectArray
@@ -112,13 +109,12 @@ class GameAdoCarFilter(object):
         if not self.nearby_ready:
             self.nearby_ready = True
 
-
     def timer_cb(self, event):
         '''
-        This is a callback for the class timer, which will be called every tick.
-        The callback will filter out objects not relevant to the ego vehicle and
-        publish to the ROS topics defined in the class.
-        
+        This is a callback for the class timer, which will be called every
+        tick. The callback will filter out objects not relevant to the ego
+        vehicle and publish to the ROS topics defined in the class.
+
         Parameters
         ----------
         event : rospy.TimerEvent
@@ -128,7 +124,7 @@ class GameAdoCarFilter(object):
             '''
             Determines if the object is in the circle and relevant to the
             current ego position.
-            
+
             Parameters
             ----------
             pos_x : float64
@@ -139,7 +135,7 @@ class GameAdoCarFilter(object):
                 The yaw, heading, of the ego vehicle.
             object : derived_object_msgs.Object
                 The converted Carla object.
-            
+
             Returns
             -------
             bool, int, float
@@ -191,7 +187,7 @@ class GameAdoCarFilter(object):
             # Object's relative postion is relevant
             if (
                 distance_tangent > -15 and
-                distance_tangent < 25 and 
+                distance_tangent < 25 and
                 abs(distance_normal) < 25
             ):
                 if distance_tangent > 0:
@@ -201,10 +197,9 @@ class GameAdoCarFilter(object):
                     rospy.logdebug("Ado object %d is behind.", object.id)
                     return True, 0, np.linalg.norm(ori_rel)
 
-            # Object is in the circle, but not relevant to ego location 
+            # Object is in the circle, but not relevant to ego location
             rospy.logdebug("Ado object %d is not relevant.", object.id)
             return False, 0, 0
-
 
         def relevant_filter_entrance(pos_x, pos_y, object):
             '''
@@ -212,7 +207,7 @@ class GameAdoCarFilter(object):
             to the current ego position. The filter will take into account
             whether the object is ahead of the ego and whether to base its
             relevancy on the object's current lane.
-            
+
             Parameters
             ----------
             pos_x : float64
@@ -221,7 +216,7 @@ class GameAdoCarFilter(object):
                 The y location of the ego vehicle.
             object : derived_object_msgs.Object
                 The converted Carla object.
-            
+
             Returns
             -------
             bool
@@ -239,14 +234,14 @@ class GameAdoCarFilter(object):
                         return True
                     return False
                 elif pos_x <= 0 and pos_y >= 0:
-                    if (pos_car[0] < -20 and pos_car[1]< 0):
+                    if (pos_car[0] < -20 and pos_car[1] < 0):
                         return True
                     return False
                 else:
                     if pos_car[0] > 0 and pos_car[1] < -20:
                         return True
                     return False
-            else: #TODO: Update to use waypoint information
+            else:  # TODO: Update to use waypoint information
                 if pos_x > 0 and pos_y < 0:
                     if (pos_car[0] > 15 and pos_car[1] > 0 and pos_car[1] < 7):
                         return True
@@ -273,7 +268,7 @@ class GameAdoCarFilter(object):
                     if (
                         (
                             pos_car[0] > 0 and
-                            pos_car[0] < 5 and 
+                            pos_car[0] < 5 and
                             pos_car[1] < -20
                         ) or
                         (
@@ -286,7 +281,6 @@ class GameAdoCarFilter(object):
                         return True
 
                     return False
-
 
         if self.ego_ready and self.nearby_ready:
             self.ego_odom_pub.publish(self.ego_odom)
@@ -378,11 +372,10 @@ class GameAdoCarFilter(object):
             color_opp = ColorRGBA(1.0, 0.0, 0.0, 1.0)
             self.viz_cars([ado_object], header, color_opp, self.ado_marker_pub)
 
-
     def viz_cars(self, obj_list, header, color_rgba, publisher):
         '''
         Publish objects to the provied rviz publisher.
-        
+
         Parameters
         ----------
         obj_list : [Objects]
