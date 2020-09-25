@@ -247,9 +247,11 @@ class AckermannController:
         if self.pathReady and self.stateReady:
             pos_x, pos_y = self.state.get_position()
 
-            # pick target w/o collision avoidance, closest point on the traj and one point ahead
+            # Pick target w/o collision avoidance. Find the closest point in the
+            # trajectory tree.
             _, idx = self.path_tree.query([pos_x, pos_y])
-            # Target point for steering
+
+            # Steering target. Three points ahead of closest point.
             if idx < self.traj_steps - 3:
                 target_pt = self.path_tree.data[idx + 3, :]
                 # str_idx = idx + 2
@@ -258,7 +260,7 @@ class AckermannController:
                 # str_idx = self.vel_path.shape[0] - 1
                 print("CONTROLLER: at the end of the desired waypoits!!!")
 
-            # Target point for velocity
+            # Velocity target. Use the desired velocity from closest point.
             if idx < self.traj_steps:
                 target_vel = self.vel_path[idx, :]
                 # str_idx = idx + 2
@@ -304,20 +306,7 @@ class AckermannController:
             cmd_msg.acceleration
             cmd_msg.jerk = jerk
 
-            # Print out some debugging information
-            if abs(target_speed - self.max_speed) > 2.0:
-                # print("Posit diff:", pos_diff)
-                print("Speed diff:", speed_diff)
-                print("Current speed:", self.state.get_speed())
-                print("Desired speed:", target_speed)
-                print("Desired accel:", acceleration)
-                print("Desired jerk:", jerk)
-                print("Speed (sent):", cmd_msg.speed)
-                print("Accel (sent):", cmd_msg.acceleration)
-                print("Jerk  (sent):", cmd_msg.jerk)
-                print("delta t:", delta_t)
-
-            # for visualization purposes and debuging control node
+            # For visualization purposes and debuging control node
             mk_msg = Marker()
             mk_msg.header.stamp = rospy.Time.now()
             mk_msg.header.frame_id = 'map'
@@ -374,8 +363,6 @@ class AckermannController:
             d_steer = (steer - self.steer_cache)
         else:
             d_steer = 0.0
-
-        # print("steer, d_steer:", steer, d_steer)
 
         steer = steer + d_steer*self.pid_str_deriv
         self.steer_cache = steer
