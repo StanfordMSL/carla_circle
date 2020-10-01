@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 # map_updater.py
-# this node publishes the drivable track center and track with around a circle given current position of a car
+# this node publishes the drivable track center and track with around a circle
+# given current position of a car
 # updates at a certain frequency
 # this file is to work with optimization based game-theoretic planner
 # author: mingyuw@stanford.edu
@@ -194,8 +195,8 @@ class MapUpdater:
         for i in range(self.steps):
             pose_s = PoseStamped()
             pose_s.header = self.ego_track_info.header
-            pose_s.pose.position.x = track_c[0,i]
-            pose_s.pose.position.y = track_c[1,i]
+            pose_s.pose.position.x = track_c[0, i]
+            pose_s.pose.position.y = track_c[1, i]
             self.ego_track_info.poses.append(pose_s)
 
         # append the track width info as the last element of path.poses
@@ -215,8 +216,8 @@ class MapUpdater:
         for i in range(self.steps):
             pose_s = PoseStamped()
             pose_s.header = self.ado_track_info.header
-            pose_s.pose.position.x = track_c[0,i]
-            pose_s.pose.position.y = track_c[1,i]
+            pose_s.pose.position.x = track_c[0, i]
+            pose_s.pose.position.y = track_c[1, i]
             self.ado_track_info.poses.append(pose_s)
 
         # append the track width info as the last element of path.poses
@@ -242,8 +243,8 @@ class MapUpdater:
         for i in range(self.steps):
             pose_s = PoseStamped()
             pose_s.header = self.ego_track_info.header
-            pose_s.pose.position.x = track_c[0,i]
-            pose_s.pose.position.y = track_c[1,i]
+            pose_s.pose.position.x = track_c[0, i]
+            pose_s.pose.position.y = track_c[1, i]
             self.ego_track_info.poses.append(pose_s)
 
         # append the track width info as the last element of path.poses
