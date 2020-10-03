@@ -1,16 +1,11 @@
 #!/usr/bin/env python
 
 # map_updater.py
-# this node publishes the drivable track center and track with around a circle
-# given current position of a car
-# updates at a certain frequency
-# this file is to work with optimization based game-theoretic planner
 # author: mingyuw@stanford.edu
 
 import rospy
 import tf
-from geometry_msgs.msg import PoseStamped
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
 from nav_msgs.msg import Path, Odometry
 
 
@@ -23,10 +18,29 @@ import random
 
 import carla
 from carla_circle.srv import GetAvailablePath
-# from utilities.parsers import get_mcity_route
 
 
 def get_mcity_route(filename):
+    '''
+    Returns a collection of waypoints representing the global plan/route in
+    which the ego vehicle should follow.
+
+    The parsing of the waypoints is done in such a way to try and remove
+    consecutive duplicates from the csv file. Since these files seem to be the
+    obtained from a recording of Michigan's vehicle, the csv has several
+    waypoints consecutively from where the vehicle is not moving. 
+
+    Parameters
+    ----------
+    filename : str
+        The name of the file that will be parsed to obtain the route.
+
+    Returns
+    -------
+    KDTree
+        A KDTree object that contains the collection of waypoints representing
+        the global plan for the ego vehicle.
+    '''
     resource_folder = os.path.join(os.path.dirname(__file__), "../resource/")
     route_file = os.path.join(resource_folder, filename)
     route = None
@@ -63,7 +77,14 @@ def get_mcity_route(filename):
 
 
 class odom_state(object):
+    '''
+    This class stores an instantaneous odometry state of the vehicle. All units
+    are SI.
+    '''
     def __init__(self):
+        '''
+        Initializes the class variables.
+        '''
         self.time = None
         self.x = None
         self.y = None
@@ -73,6 +94,15 @@ class odom_state(object):
         self.speed = None
 
     def update_vehicle_state(self, odom_msg):
+        '''
+        Updates the member variables to the instantaneous odometry state of a
+        vehicle.
+
+        Parameters
+        ----------
+        odom_msg : Odometry
+            A message containing the current odometry state of the vehicle.
+        '''
         self.time = odom_msg.header.stamp.to_sec()
         self.x = odom_msg.pose.pose.position.x
         self.y = odom_msg.pose.pose.position.y
@@ -87,23 +117,68 @@ class odom_state(object):
         self.vx = odom_msg.twist.twist.linear.x
         self.vy = odom_msg.twist.twist.linear.y
         self.speed = np.sqrt(self.vx**2 + self.vy**2)
-        # print("this is the current speed", self.speed)
 
     def get_position(self):
+        '''
+        Returns the stored global position :math:`(x, y)` of the vehicle
+        center.
+
+        Returns
+        -------
+        Array
+            The 2D position (global) of the vehicle.
+        '''
         return [self.x, self.y]
 
     def get_pose(self):
+        '''
+        Returns the stored global position :math:`(x, y)` of the vehicle center
+        and heading/yaw :math:`(\theta)` with respect to the x-axis.
+
+        Returns
+        -------
+        Array
+            A SE(2) vector representing the global position and heading of the
+            vehicle.
+        '''
         return [self.x, self.y, self.yaw]
 
     def get_velocity(self):
-        return [self.vs, self.vy]
+        '''
+        Returns the stored global velocity :math:`(v_x, v_y)` of the vehicle.
+
+        Returns
+        -------
+        Array
+            The 2D velocity (global) of the vehicle.
+        '''
+        return [self.vx, self.vy]
 
     def get_speed(self):
+        '''
+        Returns the stored global speed of the vehicle.
+
+        Returns
+        -------
+        float
+            The speed (global) of the vehicle.
+        '''
         return self.speed
 
 
 class MapUpdater:
+    '''
+    A ROS node used to publish the drivable track center given current
+    position of a car.
+
+    The node updates at a provided frequency. This class is designed to work
+    with an optimization based game-theoretic planner.
+    '''
     def __init__(self):
+        '''
+        Initializes the class, including creating the publishers and
+        subscribers used throughout the class.
+        '''
         rospy.init_node("map_updater", anonymous=True)
         ns = rospy.get_namespace()
         rospy.loginfo_once(
@@ -171,16 +246,52 @@ class MapUpdater:
         )
 
     def odom_cb(self, msg):
+        '''
+        Callback function to update the odometry state of the ego vehicle
+        according to the received message.
+
+        Parameters
+        ----------
+        msg : Odometry
+            The message containing the vehicle's odometry state.
+        '''
         self.state.update_vehicle_state(msg)
+
         if not self.stateReady:
             self.stateReady = True
 
     def ado_odom_cb(self, msg):
+        '''
+        Callback function to update the odometry state of the opponent vehicle
+        according to the received message.
+
+        Parameters
+        ----------
+        msg : Odometry
+            The message containing the vehicle's odometry state.
+        '''
         self.ado_state.update_vehicle_state(msg)
+
         if not self.ado_stateReady:
             self.ado_stateReady = True
 
     def get_path_from_position(self, position_x, position_y):
+        '''
+        Returns the track width and center based on the position of the
+        vehicle.
+
+        Parameters
+        ----------
+        position_x : float
+            The x global position of the vehicle wrt the origin of the map.
+        position_y : float
+            The y global position of the vehicle wrt the origin of the map.
+
+        Returns
+        -------
+        (float, float)
+            The center of the track and the width of the track.
+        '''
         track_center = np.zeros((2, self.steps))
         track_width = 5.0
 
@@ -193,6 +304,11 @@ class MapUpdater:
         return track_center, track_width
 
     def update_ego_track(self):
+        '''
+        Updates the ego vehicle's path.
+
+        The path is a nav_msg.Path object.
+        '''
         ego_pos = self.state.get_position()
         track_c, track_w = self.get_path_from_position(ego_pos[0], ego_pos[1])
         self.ego_track_info.header.stamp = rospy.Time.now()
@@ -213,6 +329,11 @@ class MapUpdater:
         self.ego_track_info.poses.append(track_w_pose)
 
     def update_ado_track(self):
+        '''
+        Updates the opponent vehicle's path.
+
+        The path is a nav_msg.Path object.
+        '''
         ado_pos = self.ado_state.get_position()
 
         track_c, track_w = self.get_path_from_position(ado_pos[0], ado_pos[1])
@@ -308,7 +429,18 @@ class MapUpdater:
         return track_center, track_width
 
     def timer_cb(self, event):
-        # lazy update of track information
+        '''
+        This is a callback for the class timer, which will be called every
+        tick.
+
+        The callback updates of track information for the ego and opponent
+        vehicles.
+
+        Parameters
+        ----------
+        event : rospy.TimerEvent
+            The timer's tick event.
+        '''
         if self.stateReady and self.ado_stateReady:
             self.update_ego_track()
             self.update_ado_track()

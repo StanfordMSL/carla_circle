@@ -98,7 +98,7 @@ class odom_state(object):
 
         Returns
         -------
-        Array
+        float
             The speed (global) of the vehicle.
         '''
         return self.speed
@@ -112,7 +112,7 @@ class AckermannController:
     '''
     def __init__(self):
         '''
-        Initializes the class, including creating the used publishers and
+        Initializes the class, including creating the publishers and
         subscribers used throughout the class.
         '''
         rospy.init_node("controller", anonymous=True)
@@ -221,7 +221,9 @@ class AckermannController:
     def timer_cb(self, event):
         '''
         This is a callback for the class timer, which will be called every
-        tick. The callback calculates the target values of the AckermannDrive
+        tick.
+
+        The callback calculates the target values of the AckermannDrive
         message and publishes the command to the ego vehicle's Ackermann
         control topic.
 
@@ -313,6 +315,21 @@ class AckermannController:
         self.command_pub.publish(cmd_msg)
 
     def compute_ackermann_long_params(self, target_velocity):
+        '''
+        Calculates the desired longitudinal values for the vehicle to smoothly
+        get to the desired speed.
+
+        Parameters
+        ----------
+        target_velocity : float
+            The target velocity (global) in which the vehicle should drive.
+
+        Returns
+        -------
+        (float, float, float)
+            The calculated desired speed, acceleration and jerk of the vehicle,
+            respectively.
+        '''
         desired_speed = 0.0
         desired_acceleration = 0.0
         desired_jerk = 0.0
@@ -323,6 +340,8 @@ class AckermannController:
         # Calculate the desired acceleration
         speed_diff = desired_speed - self.state.get_speed()
         acceleration = abs(speed_diff) / (2.0 * self.time_step)
+
+        desired_acceleration = acceleration
 
         return (desired_speed, desired_acceleration, desired_jerk)
 
@@ -355,7 +374,7 @@ class AckermannController:
         rel_pos = np.array([target_pt[0] - pos_x, target_pt[1] - pos_y, 0])
         rel_pos_norm = np.linalg.norm(rel_pos)
 
-        rel_pos_unit = rel_pos / np.linalg.norm(rel_pos)
+        rel_pos_unit = rel_pos / rel_pos_norm
         rot = np.cross(rel_pos_unit, egoOri)
         steer = -rot[2] * self.pid_str_prop
 
