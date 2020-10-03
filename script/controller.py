@@ -8,11 +8,10 @@ from trajectory_msgs.msg import MultiDOFJointTrajectory
 from ackermann_msgs.msg import AckermannDrive
 from visualization_msgs.msg import Marker
 
-from carla_msgs.msg import CarlaEgoVehicleControl
 from carla_msgs.msg import CarlaEgoVehicleInfo
 from scipy.spatial import KDTree
 import numpy as np
-import timeit
+
 
 class odom_state(object):
     '''
@@ -32,12 +31,11 @@ class odom_state(object):
         self.vy = None
         self.speed = None
 
-
     def update_vehicle_state(self, odom_msg):
         '''
         Updates the member variables to the instantaneous odometry state of a
         vehicle.
-        
+
         Parameters
         ----------
         odom_msg : Odometry
@@ -58,11 +56,11 @@ class odom_state(object):
         self.vy = odom_msg.twist.twist.linear.y
         self.speed = np.sqrt(self.vx**2 + self.vy**2)
 
-
     def get_position(self):
         '''
-        Returns the stored global position :math:`(x, y)` of the vehicle center.
-        
+        Returns the stored global position :math:`(x, y)` of the vehicle
+        center.
+
         Returns
         -------
         Array
@@ -70,12 +68,11 @@ class odom_state(object):
         '''
         return [self.x, self.y]
 
-
     def get_pose(self):
         '''
         Returns the stored global position :math:`(x, y)` of the vehicle center
         and heading/yaw :math:`(\theta)` with respect to the x-axis.
-        
+
         Returns
         -------
         Array
@@ -84,11 +81,10 @@ class odom_state(object):
         '''
         return [self.x, self.y, self.yaw]
 
-
     def get_velocity(self):
         '''
         Returns the stored global velocity :math:`(v_x, v_y)` of the vehicle.
-        
+
         Returns
         -------
         Array
@@ -96,17 +92,17 @@ class odom_state(object):
         '''
         return [self.vx, self.vy]
 
-
     def get_speed(self):
         '''
         Returns the stored global speed of the vehicle.
-        
+
         Returns
         -------
         Array
             The speed (global) of the vehicle.
         '''
         return self.speed
+
 
 class AckermannController:
     '''
@@ -139,7 +135,7 @@ class AckermannController:
 
         # path tracking information
         self.pathReady = False
-        self.path = np.zeros(shape=(self.traj_steps, 2)) # Absolute position
+        self.path = np.zeros(shape=(self.traj_steps, 2))  # Absolute position
         self.path_tree = KDTree(self.path)
         self.vel_path = np.zeros(shape=(self.traj_steps, 2))
 
@@ -176,7 +172,7 @@ class AckermannController:
         topic = "/carla/{}/vehicle_info".format(rolename)
         rospy.loginfo_once(
             "Vehicle information for %s: %s",
-            rolename, 
+            rolename,
             rospy.wait_for_message(topic, CarlaEgoVehicleInfo)
         )
 
@@ -186,12 +182,11 @@ class AckermannController:
             self.timer_cb
         )
 
-
     def desired_waypoints_cb(self, msg):
         '''
         A callback function that updates the desired the desired trajectory the
         ego vehicle should follow.
-        
+
         Parameters
         ----------
         msg : MultiDOFJointTrajectory
@@ -208,12 +203,11 @@ class AckermannController:
         if not self.pathReady:
             self.pathReady = True
 
-
     def odom_cb(self, msg):
         '''
         Callback function to update the odometry state of the vehicle according
         to the received message.
-        
+
         Parameters
         ----------
         msg : Odometry
@@ -224,13 +218,13 @@ class AckermannController:
         if not self.stateReady:
             self.stateReady = True
 
-
     def timer_cb(self, event):
         '''
-        This is a callback for the class timer, which will be called every tick.
-        The callback calculates the target values of the AckermannDrive message
-        and publishes the command to the ego vehicle's Ackermann control topic.
-        
+        This is a callback for the class timer, which will be called every
+        tick. The callback calculates the target values of the AckermannDrive
+        message and publishes the command to the ego vehicle's Ackermann
+        control topic.
+
         Parameters
         ----------
         event : rospy.TimerEvent
@@ -250,8 +244,8 @@ class AckermannController:
         if self.pathReady and self.stateReady:
             pos_x, pos_y = self.state.get_position()
 
-            # Pick target w/o collision avoidance. Find the closest point in the
-            # trajectory tree.
+            # Pick target w/o collision avoidance. Find the closest point in
+            # the trajectory tree.
             _, idx = self.path_tree.query([pos_x, pos_y])
 
             # Steering target. Three points ahead of closest point.
@@ -273,7 +267,7 @@ class AckermannController:
             acceleration = abs(speed_diff) / (2.0 * delta_t)
             cmd_msg.acceleration = np.min([1.5, acceleration])
             steer = self.compute_ackermann_steer(target_pt)
-            
+
             steer_diff = abs(steer - self.steer_prev)
             rospy.logdebug("Steering difference: %f", steer_diff)
 
@@ -318,7 +312,6 @@ class AckermannController:
         # self.vehicle_cmd_pub.publish(vehicle_cmd_msg)
         self.command_pub.publish(cmd_msg)
 
-
     def compute_ackermann_long_params(self, target_velocity):
         desired_speed = 0.0
         desired_acceleration = 0.0
@@ -333,17 +326,16 @@ class AckermannController:
 
         return (desired_speed, desired_acceleration, desired_jerk)
 
-
     def compute_ackermann_steer(self, target_pt):
         '''
         Calculates the desired steering command [-1, 1] for the vehicle to
         manuever towards the provided global position :math:`(x, y)`.
-        
+
         Parameters
         ----------
         target_pt : Array
             The 2D target position (global) in which the vehicle should head.
-        
+
         Returns
         -------
         float

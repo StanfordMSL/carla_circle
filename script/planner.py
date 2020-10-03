@@ -240,6 +240,7 @@ class TrajectoryPlanner:
                 return t_min, t_max, relevant_flag
 
             t_min, t_max, flag = enter_area_time(pos_x, pos_y, ang_speed)
+
             if flag:
                 other_min_list = []
                 other_max_list = []
@@ -259,6 +260,7 @@ class TrajectoryPlanner:
                     min2, max2 = inter2
                     min = np.max([min1, min2])
                     max = np.min([max1, max2])
+
                     if min < max - 0.01:
                         return [min, max]
                     else:
@@ -282,7 +284,6 @@ class TrajectoryPlanner:
                     interaction_flag = False
                 else:
                     interaction_flag = True
-
             else:
                 interaction_flag = False
 
@@ -296,6 +297,7 @@ class TrajectoryPlanner:
                 traj_msg.header.frame_id = 'map'
                 traj_msg.points = []
                 angle_increment = ang_speed * self.time_step
+
                 for i in range(self.steps):
                     ang = current_ang + angle_increment * i
                     traj_point = MultiDOFJointTrajectoryPoint()
