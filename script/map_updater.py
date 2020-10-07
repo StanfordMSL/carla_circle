@@ -234,6 +234,17 @@ class MapUpdater:
             Path,
             queue_size=10
         )
+        self.global_plan_pub = rospy.Publisher(
+            "{}global_plan".format(ns),
+            Path,
+            queue_size=1
+        )
+
+        # Guarantees the publisher is ready before attempting to publish
+        while self.global_plan_pub.get_num_connections() < 1:
+            pass
+
+        self.publish_global_path()
 
         # Class timers
         self.update_timer = rospy.Timer(
@@ -244,6 +255,24 @@ class MapUpdater:
             rospy.Duration(exit_time),
             self.exit_cb
         )
+
+    def publish_global_path(self):
+        '''
+        Updates and publishes the global plan/path of the ego vehicle.
+        '''
+        global_path = Path()
+        global_path.header.stamp = rospy.Time.now()
+        global_path.header.frame_id = "map"
+        global_path.poses = []
+
+        for _, data in enumerate(self.global_path.data):
+            pose_s = PoseStamped()
+            pose_s.header = global_path.header
+            pose_s.pose.position.x = data[0]
+            pose_s.pose.position.y = data[1]
+            global_path.poses.append(pose_s)
+
+        self.global_plan_pub.publish(global_path)
 
     def odom_cb(self, msg):
         '''
