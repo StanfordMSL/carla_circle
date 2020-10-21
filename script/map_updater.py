@@ -185,11 +185,17 @@ class MapUpdater:
             "Initializing map updater for namespace '{}'".format(ns)
         )
 
+        # Get Carla server information
+        host = rospy.get_param("/carla/host")
+        port = rospy.get_param("/carla/port")
+        carla_client = carla.Client(host, port)
+        carla_world = carla_client.get_world()
+        self.carla_map = carla_world.get_map()
+
         # retrieve ros parameters
         self.steps = rospy.get_param("~steps")  # Num of waypoints in the track
         self.distance = rospy.get_param("~distance")  # dist btw 2 waypoints
         freq = rospy.get_param("~update_frequency")
-        exit_time = rospy.get_param("~exit_time")
         self.max_speed = rospy.get_param("~max_speed")
         self.opp_speed = rospy.get_param("~opp_speed")
         self.plan_horizon = rospy.get_param("~plan_horizon")
@@ -223,7 +229,8 @@ class MapUpdater:
             self.ado_odom_cb
         )
 
-        # Publishers for track information of ego and opponent
+        # Publishers for track information of ego and opponent, as well as
+        # global route
         self.ego_track_pub = rospy.Publisher(
             "MSLcar0/mpc/ego_track_information",
             Path,
@@ -251,10 +258,6 @@ class MapUpdater:
             rospy.Duration(1.0/freq),
             self.timer_cb
         )
-        self.exit_timer = rospy.Timer(
-            rospy.Duration(exit_time),
-            self.exit_cb
-        )
 
     def publish_global_path(self):
         '''
@@ -269,7 +272,7 @@ class MapUpdater:
             pose_s = PoseStamped()
             pose_s.header = global_path.header
             pose_s.pose.position.x = data[0]
-            pose_s.pose.position.y = data[1]
+            pose_s.pose.position.y = -data[1]
             global_path.poses.append(pose_s)
 
         self.global_plan_pub.publish(global_path)
@@ -318,17 +321,37 @@ class MapUpdater:
 
         Returns
         -------
-        (float, float)
+        (numpy.ndarray, float)
             The center of the track and the width of the track.
         '''
         track_center = np.zeros((2, self.steps))
-        track_width = 5.0
+        track_width = 3.0
+        waypoint = self.carla_map.get_waypoint(
+            carla.Location(position_x, position_y, 0.0)
+        )
+
+        # if waypoint.lane_change is carla.LaneChange.Right:
+        #     track_width = 2.0 * waypoint.lane_width
+        # elif waypoint.lane_change is carla.LaneChange.Left:
+        #     track_width = 2.0 * waypoint.lane_width
+        # elif waypoint.lane_change is carla.LaneChange.Both:
+        #     track_width = 3.0 * waypoint.lane_width
+        # else:
+        #     track_width = waypoint.lane_width
+        track_width = waypoint.lane_width
 
         _, idx = self.global_path.query([position_x, position_y])
         if idx < 2:
             track_center = self.global_path.data[idx: idx + 20, :].T.copy()
         else:
             track_center = self.global_path.data[idx - 2: idx + 18, :].T.copy()
+
+        # rospy.logdebug(
+        rospy.logdebug(
+            "Track:\nCenters - {}\nWidth - {}".format(
+                track_center, track_width
+            )
+        )
 
         return track_center, track_width
 
@@ -382,80 +405,6 @@ class MapUpdater:
         track_w_pose.header = self.ado_track_info.header
         track_w_pose.pose.position.x = track_w
         self.ado_track_info.poses.append(track_w_pose)
-
-    def exit_cb(self, event):
-        # change stage from stay/enter the circle to exit the circle
-        if self.current_stage == 1:
-            self.current_stage = 2
-        print(" SWITCHED TO EXIT MODE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-
-    def update_ego_track_exit(self):
-        # print(" UPDATE EXIT TRACK !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        ego_pos = self.state.get_position()
-        track_c, track_w = self.get_exit_path(ego_pos[0], ego_pos[1])
-        self.ego_track_info.header.stamp = rospy.Time.now()
-        self.ego_track_info.header.frame_id = "map"
-        self.ego_track_info.poses = []
-
-        for i in range(self.steps):
-            pose_s = PoseStamped()
-            pose_s.header = self.ego_track_info.header
-            pose_s.pose.position.x = track_c[0, i]
-            pose_s.pose.position.y = track_c[1, i]
-            self.ego_track_info.poses.append(pose_s)
-
-        # append the track width info as the last element of path.poses
-        track_w_pose = PoseStamped()
-        track_w_pose.header = self.ego_track_info.header
-        track_w_pose.pose.position.x = track_w
-        self.ego_track_info.poses.append(track_w_pose)
-
-    def get_exit_path(self, position_x, position_y):
-        track_center = np.zeros((2, self.steps))
-        track_width = 5.0
-        pos_the = np.arctan2(position_y, position_x)
-
-        if pos_the > 0:    # if the car is currently in the other half circle
-            the = np.linspace(pos_the-0.5, pos_the - 0.5 + np.pi, self.steps)
-            radius = 21.75
-
-            for i in range(self.steps):
-                track_center[:, i] = [
-                    radius*np.cos(the[i]), radius*np.sin(the[i])
-                ]
-        else:  # if the car is in existing half circle
-            if position_x < 30:  # still use our stored path information
-                _, idx = self.exit_tree.query([position_x, position_y])
-
-                if idx < 2:
-                    track_center = self.exit_tree.data[idx: idx + 20, :].T.copy()
-                else:
-                    track_center = self.exit_tree.data[idx - 2: idx + 18, :].T.copy()
-            else:
-                current_pose = Pose()
-                current_pose.position.x = position_x
-                current_pose.position.y = position_y
-
-                try:
-                    track_width = 3.2
-                    track_center = np.zeros((2, self.steps))
-                    path_list_resp = self.get_path_handle(current_pose)
-                    path = path_list_resp.paths.paths[0]
-                    # print(" this is our beloved path", path)
-
-                    for i in range(self.steps - 2):
-                        track_center[0,i+2] = path.poses[i].pose.position.x
-                        track_center[1,i+2] = path.poses[i].pose.position.y
-
-                    track_center[0, 1] = 2*track_center[0, 2] - track_center[0, 3]
-                    track_center[1, 1] = 2*track_center[1, 2] - track_center[1, 3]
-                    track_center[0, 0] = 2*track_center[0, 1] - track_center[0, 2]
-                    track_center[1, 0] = 2*track_center[1, 1] - track_center[1, 2]
-                except rospy.ServiceException, e:
-                    print "Service call failed: %s" % e
-                # print(" track center ", track_center)
-
-        return track_center, track_width
 
     def timer_cb(self, event):
         '''
