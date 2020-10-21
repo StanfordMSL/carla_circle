@@ -135,9 +135,9 @@ class egoTrackVisualizer(object):
 
         for i in range(len(msg.poses)-2):
             pos_x = msg.poses[i].pose.position.x
-            pos_y = msg.poses[i].pose.position.y
+            pos_y = -msg.poses[i].pose.position.y
             pos_x_n = msg.poses[i+1].pose.position.x
-            pos_y_n = msg.poses[i+1].pose.position.y
+            pos_y_n = -msg.poses[i+1].pose.position.y
             yaw = np.arctan2(pos_y_n - pos_y, pos_x_n - pos_x)
 
             mk = Marker()
