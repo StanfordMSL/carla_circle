@@ -17,8 +17,6 @@ import os
 import random
 
 import carla
-from carla_circle.srv import GetAvailablePath
-
 
 def get_mcity_route(filename):
     '''
@@ -28,7 +26,7 @@ def get_mcity_route(filename):
     The parsing of the waypoints is done in such a way to try and remove
     consecutive duplicates from the csv file. Since these files seem to be the
     obtained from a recording of Michigan's vehicle, the csv has several
-    waypoints consecutively from where the vehicle is not moving. 
+    waypoints consecutively from where the vehicle is not moving.
 
     Parameters
     ----------
@@ -168,11 +166,9 @@ class odom_state(object):
 
 class MapUpdater:
     '''
-    A ROS node used to publish the drivable track center given current
-    position of a car.
+    A ROS node used to publish the near-future route of ego vehicle.
 
-    The node updates at a provided frequency. This class is designed to work
-    with an optimization based game-theoretic planner.
+    The node publishes at a provided frequency.
     '''
     def __init__(self):
         '''
@@ -185,20 +181,9 @@ class MapUpdater:
             "Initializing map updater for namespace '{}'".format(ns)
         )
 
-        # Get Carla server information
-        host = rospy.get_param("/carla/host")
-        port = rospy.get_param("/carla/port")
-        carla_client = carla.Client(host, port)
-        carla_world = carla_client.get_world()
-        self.carla_map = carla_world.get_map()
-
         # retrieve ros parameters
         self.steps = rospy.get_param("~steps")  # Num of waypoints in the track
-        self.distance = rospy.get_param("~distance")  # dist btw 2 waypoints
         freq = rospy.get_param("~update_frequency")
-        self.max_speed = rospy.get_param("~max_speed")
-        self.opp_speed = rospy.get_param("~opp_speed")
-        self.plan_horizon = rospy.get_param("~plan_horizon")
 
         # state information
         self.stateReady = False
@@ -206,25 +191,20 @@ class MapUpdater:
         self.ado_stateReady = False
         self.ado_state = odom_state()
 
-        self.current_stage = 1  # 1 -- start and circle     2 -- existing
-
         # path information
         self.ego_track_info = Path()
         self.ado_track_info = Path()
         self.global_path = get_mcity_route('ego_trajectory_event1.csv')
 
-        # service proxy to get a path update from carla world
-        rospy.wait_for_service("get_path", 8.0)
-        self.get_path_handle = rospy.ServiceProxy('get_path', GetAvailablePath)
 
         # Subscribers for ego and opponent vehicle odometry
         rospy.Subscriber(
-            "MSLcar0/ground_truth/odometry",
+            "/carla/hero/odometry",
             Odometry,
             self.odom_cb
         )
         rospy.Subscriber(
-            "MSLcar1/ground_truth/odometry",
+            "ado/ground_truth/odometry",
             Odometry,
             self.ado_odom_cb
         )
@@ -232,12 +212,12 @@ class MapUpdater:
         # Publishers for track information of ego and opponent, as well as
         # global route
         self.ego_track_pub = rospy.Publisher(
-            "MSLcar0/mpc/ego_track_information",
+            "ego_track_information",
             Path,
             queue_size=10
         )
         self.ado_track_pub = rospy.Publisher(
-            "MSLcar0/mpc/ado_track_information",
+            "ado_track_information",
             Path,
             queue_size=10
         )
@@ -308,6 +288,7 @@ class MapUpdater:
             self.ado_stateReady = True
 
     def get_path_from_position(self, position_x, position_y):
+
         '''
         Returns the track width and center based on the position of the
         vehicle.
@@ -326,27 +307,14 @@ class MapUpdater:
         '''
         track_center = np.zeros((2, self.steps))
         track_width = 3.0
-        waypoint = self.carla_map.get_waypoint(
-            carla.Location(position_x, position_y, 0.0)
-        )
 
-        # if waypoint.lane_change is carla.LaneChange.Right:
-        #     track_width = 2.0 * waypoint.lane_width
-        # elif waypoint.lane_change is carla.LaneChange.Left:
-        #     track_width = 2.0 * waypoint.lane_width
-        # elif waypoint.lane_change is carla.LaneChange.Both:
-        #     track_width = 3.0 * waypoint.lane_width
-        # else:
-        #     track_width = waypoint.lane_width
-        track_width = waypoint.lane_width
-
-        _, idx = self.global_path.query([position_x, position_y])
-        if idx < 2:
-            track_center = self.global_path.data[idx: idx + 20, :].T.copy()
+        _, idx = self.global_path.query([position_x, -position_y])
+        if idx < 1:
+            track_center = self.global_path.data[idx: idx + self.steps, :].T.copy()
         else:
-            track_center = self.global_path.data[idx - 2: idx + 18, :].T.copy()
+            track_center = self.global_path.data[idx - 1: idx + self.steps - 1, :].T.copy()
+        track_center[1,:] = -track_center[1,:]
 
-        # rospy.logdebug(
         rospy.logdebug(
             "Track:\nCenters - {}\nWidth - {}".format(
                 track_center, track_width
@@ -419,13 +387,15 @@ class MapUpdater:
         event : rospy.TimerEvent
             The timer's tick event.
         '''
-        if self.stateReady and self.ado_stateReady:
+        if self.stateReady:
             self.update_ego_track()
-            self.update_ado_track()
-
             self.ego_track_pub.publish(self.ego_track_info)
+
+        if self.ado_stateReady:
+            self.update_ado_track()
             self.ado_track_pub.publish(self.ado_track_info)
 
+        self.publish_global_path()
 
 if __name__ == '__main__':
     try:
