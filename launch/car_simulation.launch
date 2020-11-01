@@ -3,43 +3,34 @@
 <launch>
 
 	<arg name="rolename" default="stanford_ego" />
-	<arg name="steps" default="20" />
+	<arg name="track_steps" default="300" />
 	<arg name="distance" default="4.0" />
 	<arg name="color" default="255, 200, 200" />
 	<arg name="spawn_point" default="-6.0, -40.0, 2.0, 0.0, 0.0, 270.0" />
-	<arg name="max_speed" default="5.0" />
+	<arg name="max_speed" default="2.0" />
 	<arg name="opp_speed" default="5.0" />
-	<arg name="plan_horizon" default="5.0" />
+	<arg name="plan_horizon" default="3.0" />
 	<arg name="plan_steps" default="10" />
 	<arg name="time_step" value="$(eval arg('plan_horizon')/arg('plan_steps'))" />
 
 	<group ns="$(arg rolename)">
 
-		<!-- start service call for game node  -->
-		<node name="restart_call" pkg="carla_circle" type="game_start_client.py" output="screen" />
 
-		<!-- "Perception" node - currently filters out vehicles outside ROI-->
-		<node name="game_ado_car_filter" pkg="carla_circle" type="game_ado_vehicle_filter.py" output="screen">
-			<param name="rolename" value="$(arg rolename)" />
-		</node>
-
-		<!-- Planner node - works for game planner to publish current track
+		<!-- Mapper node - publish local track
 			center and track width for two cars -->
 		<node name="map_updater" pkg="carla_circle" type="map_updater.py" output="screen">
-			<param name="steps" value="$(arg steps)" />
-			<param name="distance" value="$(arg distance)" />
+			<param name="steps" value="$(arg track_steps)" />
 			<param name="update_frequency" value="10.0" />
-			<param name="exit_time" value="600" />
-			<param name="max_speed" value="$(arg max_speed)" />
-			<param name="opp_speed" value="$(arg opp_speed)" />
-			<param name="plan_horizon" value="$(arg plan_horizon)" />
 		</node>
 
-		<!-- path server updates path according to carla world map -->
-		<node name="path_server" pkg="carla_circle" type="path_server.py" output="screen">
-			<param name="steps" value="$(arg steps)" />
-			<param name="distance" value="$(arg distance)" />
+		<!-- Planner node -->
+		<node name="traj_planner" pkg="carla_circle" type="trivial_planner.py" output="screen" >
+			<param name="rolename" value="$(arg rolename)" />
+			<param name="time_step" value="$(arg time_step)" />
+			<param name="horizon" value="$(arg plan_horizon)" />
+			<param name="max_speed" value="$(arg max_speed)" />
 		</node>
+
 
 		<!-- Controller node -->
 		<node name="controller" pkg="carla_circle" type="controller.py" output="screen">

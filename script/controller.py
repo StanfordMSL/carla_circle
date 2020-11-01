@@ -152,7 +152,7 @@ class AckermannController:
             self.odom_cb
         )
         rospy.Subscriber(
-            "MSLcar0/command/trajectory",
+            "ego/command/trajectory",
             MultiDOFJointTrajectory,
             self.desired_waypoints_cb
         )
@@ -171,9 +171,10 @@ class AckermannController:
 
         topic = "/carla/{}/vehicle_info".format(rolename)
         rospy.loginfo_once(
-            "Vehicle information for %s: %s",
-            rolename,
-            rospy.wait_for_message(topic, CarlaEgoVehicleInfo)
+            "Vehicle information for {}: {}".format(
+                rolename,
+                rospy.wait_for_message(topic, CarlaEgoVehicleInfo)
+            )
         )
 
         # Class timer

@@ -5,7 +5,7 @@ from visualization_classes import DesiredWaypointsVisualization
 from visualization_classes import egoTrackVisualizer
 from visualization_classes import oppTrackVisualizer
 from visualization_classes import PredictWaypointsVisualization
-from visualization_classes import RoadGeometryVisualization
+# from visualization_classes import RoadGeometryVisualization
 from visualization_classes import RoadNetworkVisualization
 
 import carla
@@ -25,11 +25,11 @@ if __name__ == "__main__":
         carla_world = carla_client.get_world()
 
         waypointsviz = DesiredWaypointsVisualization()
-        road_viz = RoadGeometryVisualization()
+        # road_viz = RoadGeometryVisualization()
         road_topo_viz = RoadNetworkVisualization(carla_world)
         ego_track_viz = egoTrackVisualizer()
         opp_track_viz = oppTrackVisualizer()
-        pre_waypoints_viz = PredictWaypointsVisualization()
+        # pre_waypoints_viz = PredictWaypointsVisualization()
 
         rospy.spin()
 

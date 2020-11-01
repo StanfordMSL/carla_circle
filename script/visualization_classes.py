@@ -26,7 +26,7 @@ class DesiredWaypointsVisualization:
         vehicle used throughout the class.
         '''
         rospy.Subscriber(
-            "MSLcar0/command/trajectory",
+            "ego/command/trajectory",
             MultiDOFJointTrajectory,
             self.des_traj_cb
         )
@@ -45,9 +45,9 @@ class DesiredWaypointsVisualization:
         mk.header.stamp = rospy.Time.now()
         mk.header.frame_id = "map"
         mk.type = Marker.CUBE_LIST
-        mk.scale.x = 1.3
-        mk.scale.y = 1.3
-        mk.scale.z = 1.3
+        mk.scale.x = 0.5
+        mk.scale.y = 0.5
+        mk.scale.z = 0.5
         mk.color.a = 1.0
         mk.color.g = 1
 
@@ -116,7 +116,7 @@ class egoTrackVisualizer(object):
         vehicle used throughout the class.
         '''
         rospy.Subscriber(
-            "MSLcar0/mpc/ego_track_information",
+            "ego_track_information",
             Path,
             self.ego_track_cb
         )
@@ -135,9 +135,9 @@ class egoTrackVisualizer(object):
 
         for i in range(len(msg.poses)-2):
             pos_x = msg.poses[i].pose.position.x
-            pos_y = -msg.poses[i].pose.position.y
+            pos_y = msg.poses[i].pose.position.y
             pos_x_n = msg.poses[i+1].pose.position.x
-            pos_y_n = -msg.poses[i+1].pose.position.y
+            pos_y_n = msg.poses[i+1].pose.position.y
             yaw = np.arctan2(pos_y_n - pos_y, pos_x_n - pos_x)
 
             mk = Marker()
@@ -145,10 +145,10 @@ class egoTrackVisualizer(object):
             mk.header.stamp = rospy.Time.now()
             mk.header.frame_id = "map"
             mk.type = Marker.CUBE
-            mk.scale.x = 4
-            mk.scale.y = msg.poses[-1].pose.position.x * 2
-            mk.scale.z = 1.3
-            mk.color.a = 0.2
+            mk.scale.x = 0.1
+            mk.scale.y = msg.poses[-1].pose.position.x * 2    # the last one is used for track width
+            mk.scale.z = 0.3
+            mk.color.a = 0.1
             mk.color.g = 255
             mk.pose.position.x = pos_x
             mk.pose.position.y = pos_y
@@ -172,7 +172,7 @@ class oppTrackVisualizer(object):
         vehicle used throughout the class.
         '''
         rospy.Subscriber(
-            "MSLcar0/mpc/ado_track_information",
+            "ado_track_information",
             Path,
             self.track_cb
         )
