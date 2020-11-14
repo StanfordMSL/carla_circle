@@ -12,51 +12,16 @@ from geometry_msgs.msg import Transform, Vector3, Quaternion, Twist
 import numpy as np
 import math
 
-
-class odom_state(object):
-    def __init__(self, circle_center, circle_radius):
-        self.time = None
-        self.x = None
-        self.y = None
-        self.yaw = None
-        self.vx = None
-        self.vy = None
-        self.speed = None
-
-
-    def update_vehicle_state(self, odom_msg):
-        '''
-        input: ROS Odometry message
-        output: None
-        updates the time instance, position, orientation, velocity and speed
-        '''
-        self.time = odom_msg.header.stamp.to_sec()
-        self.x = odom_msg.pose.pose.position.x
-        self.y = odom_msg.pose.pose.position.y
-        ori_quat = (odom_msg.pose.pose.orientation.x,
-                    odom_msg.pose.pose.orientation.y,
-                    odom_msg.pose.pose.orientation.z,
-                    odom_msg.pose.pose.orientation.w)
-        ori_euler = tf.transformations.euler_from_quaternion(ori_quat)
-        self.yaw = ori_euler[2]
-        self.vx = odom_msg.twist.twist.linear.x
-        self.vy = odom_msg.twist.twist.linear.y
-        self.speed = np.sqrt(self.vx**2 + self.vy**2)
-
-    def get_position(self):
-        return [self.x, self.y]
-
-    def get_pose(self):
-        return [self.x, self.y, self.yaw]
-
-    def get_velocity(self):
-        return [self.vs, self.vy]
-
-    def get_speed(self):
-        return self.speed
+from map_updater import odom_state
 
 
 class TrivialPlanner:
+    '''
+    A ROS node used to publish a trajectory for ego vehicle.
+
+    Minimum planning task: takes in a path (possibly lane center), and interpolates it based
+    on current velocity to get a trajectory,
+    '''
     MAX_ACCELERATION = 3
     MAX_ACCELERATION_ANG = 3 / 19.5
 
@@ -73,18 +38,9 @@ class TrivialPlanner:
         # class attributes
         self.track = Path()  # predicted trajs for relevant cars
         self.track_ready = False
-        # predicted _trajectories
-        # each path in PathArray.paths has self.steps poses
-        # the first pose start from the current location of the relevant car
-        # the distance between sequential poses is speed(car) * self.time_step
-        # this information is used to infer the possible time when the relevant
-        # cars enter the roundabout
-
-        # self.circle_radius = 19.5  # radius of the circle trajectory
-        # self.circle_center = [-0.5, -0.3]  # center offset of the circle traj
 
         self.stateReady = False
-        self.state = odom_state(0, 0)
+        self.state = odom_state()
 
         # Subscribers for ego vehicle odometry and predicted trajectory
         rospy.Subscriber(

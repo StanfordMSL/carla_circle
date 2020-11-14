@@ -17,9 +17,6 @@
 		<arg name="fixed_delta_seconds" value="false" />
 	</include>
 
-	<!-- shared by all the cars  -->
-	<!-- <node name="car_filter" pkg="carla_circle" type="car_filter.py" output="screen" /> -->
-
 	<include file="$(find carla_circle)/launch/car_simulation.launch">
 		<arg name="rolename" value="$(arg rolename)" />
 		<arg name="color" value="255, 0, 0" />

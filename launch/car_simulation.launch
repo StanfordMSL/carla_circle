@@ -2,7 +2,7 @@
 
 <launch>
 
-	<arg name="rolename" default="stanford_ego" />
+	<arg name="rolename" default="hero" />
 	<arg name="track_steps" default="300" />
 	<arg name="distance" default="4.0" />
 	<arg name="color" default="255, 200, 200" />
@@ -19,6 +19,7 @@
 		<!-- Mapper node - publish local track
 			center and track width for two cars -->
 		<node name="map_updater" pkg="carla_circle" type="map_updater.py" output="screen">
+			<param name="rolename" value="$(arg rolename)" />
 			<param name="steps" value="$(arg track_steps)" />
 			<param name="update_frequency" value="10.0" />
 		</node>

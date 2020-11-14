@@ -28,6 +28,10 @@ def get_mcity_route(filename):
     obtained from a recording of Michigan's vehicle, the csv has several
     waypoints consecutively from where the vehicle is not moving.
 
+    Note: csv file data is given in lefthanded coordinates, while ROS and all our
+    code use righthanded coordinates. Thus, we flip the sign of y coordintes while
+    reading in waypoints.
+
     Parameters
     ----------
     filename : str
@@ -50,7 +54,7 @@ def get_mcity_route(filename):
         prev = [-99999.0, -99999.0]
 
         for _, element in enumerate(data):
-            waypoint = [element[1], element[2]]
+            waypoint = [element[1], -element[2]]
 
             if not np.allclose(waypoint, prev):
                 waypoints.append(waypoint)
@@ -184,6 +188,7 @@ class MapUpdater:
         # retrieve ros parameters
         self.steps = rospy.get_param("~steps")  # Num of waypoints in the track
         freq = rospy.get_param("~update_frequency")
+        role_name = rospy.get_param("~rolename")
 
         # state information
         self.stateReady = False
@@ -199,7 +204,7 @@ class MapUpdater:
 
         # Subscribers for ego and opponent vehicle odometry
         rospy.Subscriber(
-            "/carla/hero/odometry",
+            "/carla/" + role_name + "/odometry",
             Odometry,
             self.odom_cb
         )
@@ -252,7 +257,7 @@ class MapUpdater:
             pose_s = PoseStamped()
             pose_s.header = global_path.header
             pose_s.pose.position.x = data[0]
-            pose_s.pose.position.y = -data[1]
+            pose_s.pose.position.y = data[1]
             global_path.poses.append(pose_s)
 
         self.global_plan_pub.publish(global_path)
@@ -288,7 +293,6 @@ class MapUpdater:
             self.ado_stateReady = True
 
     def get_path_from_position(self, position_x, position_y):
-
         '''
         Returns the track width and center based on the position of the
         vehicle.
@@ -308,12 +312,12 @@ class MapUpdater:
         track_center = np.zeros((2, self.steps))
         track_width = 3.0
 
-        _, idx = self.global_path.query([position_x, -position_y])
+        _, idx = self.global_path.query([position_x, position_y])
         if idx < 1:
             track_center = self.global_path.data[idx: idx + self.steps, :].T.copy()
         else:
             track_center = self.global_path.data[idx - 1: idx + self.steps - 1, :].T.copy()
-        track_center[1,:] = -track_center[1,:]
+        track_center[1,:] = track_center[1,:]
 
         rospy.logdebug(
             "Track:\nCenters - {}\nWidth - {}".format(
