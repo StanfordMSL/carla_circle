@@ -28,11 +28,18 @@ git clone https://github.com/carla-simulator/ros-bridge.git
 cd ~/Catkin_Workspace/tri-carla-challenges/src/ros-bridge
 git reset --hard 1096747a6e84bf01ea1a859b9a0f6d01e0304ef6
 git submodule update --init
+cd ../
+rosdep update
+rosdep install --from-paths src --ignore-src -r
 cd ~/Catkin_Workspace/tri-carla-challenges/src
 git clone git@github.com:StanfordMSL/uav_game.git -b carla
 ```
 
-Then we need to compile our Catkin workspace
+Then we need to compile our Catkin workspace.
+
+**The first time you run this you do not need to run the command
+`catkin clean --yes`. If you do run the command, you will get an error, which
+can be ignored.**
 
 ```bash
 cd ~/Catkin_Workspace/tri-carla-challenges
