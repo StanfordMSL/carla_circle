@@ -13,58 +13,7 @@ from geometry_msgs.msg import Transform, Vector3, Quaternion, Twist
 import numpy as np
 import math
 
-
-class odom_state(object):
-    def __init__(self, circle_center, circle_radius):
-        self.time = None
-        self.x = None
-        self.y = None
-        self.yaw = None
-        self.vx = None
-        self.vy = None
-        self.speed = None
-
-        self.circle_center = circle_center
-        self.circle_radius = circle_radius
-        self.circle_angle = 0      # this is in polar coordinate
-
-    def update_vehicle_state(self, odom_msg):
-        '''
-        input: ROS Odometry message
-        output: None
-        updates the time instance, position, orientation, velocity and speed
-        '''
-        self.time = odom_msg.header.stamp.to_sec()
-        self.x = odom_msg.pose.pose.position.x
-        self.y = odom_msg.pose.pose.position.y
-        ori_quat = (odom_msg.pose.pose.orientation.x,
-                    odom_msg.pose.pose.orientation.y,
-                    odom_msg.pose.pose.orientation.z,
-                    odom_msg.pose.pose.orientation.w)
-        ori_euler = tf.transformations.euler_from_quaternion(ori_quat)
-        self.yaw = ori_euler[2]
-        self.vx = odom_msg.twist.twist.linear.x
-        self.vy = odom_msg.twist.twist.linear.y
-        self.speed = np.sqrt(self.vx**2 + self.vy**2)
-        self.circle_angle = np.arctan2(
-            self.y - self.circle_center[1],
-            self.x - self.circle_center[0]
-        )
-
-    def get_polar_angle(self):
-        return self.circle_angle
-
-    def get_position(self):
-        return [self.x, self.y]
-
-    def get_pose(self):
-        return [self.x, self.y, self.yaw]
-
-    def get_velocity(self):
-        return [self.vs, self.vy]
-
-    def get_speed(self):
-        return self.speed
+from map_updater import odom_state
 
 
 class TrajectoryPlanner:
