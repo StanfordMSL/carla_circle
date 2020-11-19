@@ -1,15 +1,22 @@
-# carla_circle
+# Stanford MSL (Carla) AV Stack
 
-Workspace for ROS and scripts to work with Carla MCity Event 1.
+## Overview
 
-## carla version / carla ros version
+This repository provides the MSL's AV Stack that works with the Carla Simulator.
+The instructions below explain how to setup a Catkin workspace for ROS. At the
+moment, this stack is designed for the Carla MCity Event 1.
 
-For this challenge we use a special MCity binaries provided by Michigan. The
-binaries use Carla version 0.9.9.4 and have a special map designed for the
+[comment]: <> (
+    TODO: Add details about the high and low level architecture of the AV stack
+)
+
+## Carla Version / Carla ROS Version
+
+For this challenge we use special MCity binaries provided by Univ. of Michigan.
+The binaries use Carla version 0.9.9.4 and have a special map designed for the
 challenges.
 
-
-## Setup your Catkin workspace
+## Setup the Catkin Workspace
 
 Start by creating a new catkin workspace directory. Something like
 
@@ -31,26 +38,28 @@ git submodule update --init
 cd ../
 rosdep update
 rosdep install --from-paths src --ignore-src -r
-cd ~/Catkin_Workspace/tri-carla-challenges/src
-git clone git@github.com:StanfordMSL/uav_game.git -b carla
 ```
 
 Then we need to compile our Catkin workspace.
 
 **The first time you run this you do not need to run the command
-`catkin clean --yes`. If you do run the command, you will get an error, which
+`catkin clean --yes`. If you do run the command, you will get an error, but this
 can be ignored.**
 
 ```bash
 cd ~/Catkin_Workspace/tri-carla-challenges
 catkin clean --yes
-export GUROBI_HOME=/opt/gurobi811/linux64
-catkin build uavgame
 catkin build carla_ackermann_control carla_circle carla_ego_vehicle carla_infrastructure carla_manual_control carla_msgs carla_ros_bridge carla_waypoint_publisher
 catkin build rqt_carla_control
 ```
 
-## Run the AV client
+## Running the AV Client
+
+***Note:**
+We assume an instance of Carla is running and available on the localhost. By
+default, running `./CarlaUE4.sh` from the Carla simulator directory should be
+efficient. However, if running on Michigan's server, you should follow the
+instructions found [here](https://yyab.github.io/mcityCarlaChallenge.io/).*
 
 We should now be able to run the AV client on the server. In a terminal enter
 the following:
