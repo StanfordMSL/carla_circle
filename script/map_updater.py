@@ -5,18 +5,15 @@
 
 import rospy
 import tf
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path, Odometry
-
 
 import numpy as np
 from numpy import genfromtxt
 from scipy.spatial import KDTree
 
 import os
-import random
 
-import carla
 
 def get_mcity_route(filename):
     '''
@@ -28,9 +25,9 @@ def get_mcity_route(filename):
     obtained from a recording of Michigan's vehicle, the csv has several
     waypoints consecutively from where the vehicle is not moving.
 
-    Note: csv file data is given in lefthanded coordinates, while ROS and all our
-    code use righthanded coordinates. Thus, we flip the sign of y coordintes while
-    reading in waypoints.
+    Note: csv file data is given in lefthanded coordinates, while ROS and all
+    our code use righthanded coordinates. Thus, we flip the sign of y
+    coordinates whilereading in waypoints.
 
     Parameters
     ----------
@@ -201,7 +198,6 @@ class MapUpdater:
         self.ado_track_info = Path()
         self.global_path = get_mcity_route('ego_trajectory_event1.csv')
 
-
         # Subscribers for ego and opponent vehicle odometry
         rospy.Subscriber(
             "/carla/" + role_name + "/odometry",
@@ -314,10 +310,14 @@ class MapUpdater:
 
         _, idx = self.global_path.query([position_x, position_y])
         if idx < 1:
-            track_center = self.global_path.data[idx: idx + self.steps, :].T.copy()
+            track_center = self.global_path.data[
+                idx: idx + self.steps, :
+            ].T.copy()
         else:
-            track_center = self.global_path.data[idx - 1: idx + self.steps - 1, :].T.copy()
-        track_center[1,:] = track_center[1,:]
+            track_center = self.global_path.data[
+                idx - 1: idx + self.steps - 1, :
+            ].T.copy()
+        track_center[1, :] = track_center[1, :]
 
         rospy.logdebug(
             "Track:\nCenters - {}\nWidth - {}".format(
@@ -400,6 +400,7 @@ class MapUpdater:
             self.ado_track_pub.publish(self.ado_track_info)
 
         self.publish_global_path()
+
 
 if __name__ == '__main__':
     try:
