@@ -58,7 +58,7 @@ catkin build rqt_carla_control
 ***Note:**
 We assume an instance of Carla is running and available on the localhost. By
 default, running `./CarlaUE4.sh` from the Carla simulator directory should be
-efficient. However, if running on Michigan's server, you should follow the
+sufficient. However, if running on Michigan's server, you should follow the
 instructions found [here](https://yyab.github.io/mcityCarlaChallenge.io/).*
 
 We should now be able to run the AV client on the server. In a terminal enter
@@ -69,3 +69,26 @@ export PYTHONPATH=$PYTHONPATH:/opt/Carla/MCity/PythonAPI/carla/dist/carla-0.9.9-
 source ~/Catkin_Workspace/tri-carla-challenges/devel/setup.bash
 roslaunch carla_circle mcity_event1.launch host:=localhost port:=2000 max_speed:=5.0 opp_vel:=5.0 plan_steps:=10 plan_horizon:=3.0
 ```
+
+# Notes on the MCity specific challenge
+
+Michigan is hosting the challenge on a server they run. The server ip is
+`141.211.37.251`. To log in, we need to use the username `stanford`. As
+mentioned above, you should check out their documentation to better
+understand the process. As a quick refresher, you should have a terminal
+in which you can explicitly run the command
+`ssh stanford@141.211.37.251 -L 2000:localhost:2000 -L 2001:localhost:2001 -L 2002:localhost:2002`.
+This will forward the 2000-2002 ports of your local machine to Michigan's
+server where the Carla simulation is running. Before running on the
+Michigan server, you should add a timeslot to the
+[calendar](https://calendar.google.com/calendar/u/1?cid=Y18xMGMxNjcybmFmNXFzNG1jZnFmMWRrdjBmc0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t)
+You may also want to monitor the simulation by viewing the stream at
+https://www.twitch.tv/cmpute.
+
+## Important Links
+
+- Calendar - https://calendar.google.com/calendar/u/1?cid=Y18xMGMxNjcybmFmNXFzNG1jZnFmMWRrdjBmc0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t
+- Challenge documentation - https://yyab.github.io/mcityCarlaChallenge.io/
+- Carla server stream - https://www.twitch.tv/cmpute
+
+You most likely need to request access to the calendar by emailing Xinpeng at `xinpengw at umich.edu`
