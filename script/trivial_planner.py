@@ -3,14 +3,12 @@
 # author: mingyuw@stanford.edu
 
 import rospy
-import tf
 from nav_msgs.msg import Odometry, Path
 from trajectory_msgs.msg import MultiDOFJointTrajectory
 from trajectory_msgs.msg import MultiDOFJointTrajectoryPoint
 from geometry_msgs.msg import Transform, Vector3, Quaternion, Twist
 
 import numpy as np
-import math
 
 from map_updater import OdometryState
 from predictor_module import TrajectoryPredictor
@@ -73,32 +71,40 @@ class TrivialPlanner:
     '''
     def odom_cb(self, msg):
         self.state.update_vehicle_state(msg)
+
         if not self.stateReady:
             self.stateReady = True
 
     def track_cb(self, msg):
         self.track = msg
+
         if not self.track_ready:
             self.track_ready = True
 
     def get_track_info(self):
         num_track_points = len(self.track.poses) - 1
         track_center = np.zeros((2, num_track_points))
-        track_length = np.zeros((num_track_points,))
-        track_dir = np.zeros((2,num_track_points))
+        track_length = np.zeros((num_track_points, ))
+        track_dir = np.zeros((2, num_track_points))
         track_width = self.track.poses[num_track_points].pose.position.x
+
         for i in range(num_track_points):
             track_center[0, i] = self.track.poses[i].pose.position.x
             track_center[1, i] = self.track.poses[i].pose.position.y
             if i == 0:
                 track_length[i] = 0
             else:
-                track_length[i] = track_length[i-1] + np.linalg.norm(track_center[:,i] - track_center[:,i-1])
+                track_length[i] = track_length[i - 1] + np.linalg.norm(
+                    track_center[:, i] - track_center[:, i - 1]
+                )
+
         for i in range(num_track_points):
             if i < num_track_points - 1:
-                track_dir[:,i] = (track_center[:,i+1] - track_center[:,i])/np.linalg.norm(track_center[:,i+1] - track_center[:,i])
+                track_dir[:, i] = (
+                    track_center[:, i + 1] - track_center[:, i]
+                ) / np.linalg.norm(track_center[:, i + 1] - track_center[:, i])
             else:
-                track_dir[:,i] = track_dir[:,i-1]
+                track_dir[:, i] = track_dir[:, i - 1]
 
         return track_center, track_width, track_dir, track_length
 
@@ -108,15 +114,30 @@ class TrivialPlanner:
             pos_x, pos_y = self.state.get_position()
             speed = self.reference_speed
 
-            track_center, track_width, track_dir, track_length = self.get_track_info()
+            (
+                track_center, track_width, track_dir, track_length
+            ) = self.get_track_info()
             # use interpolation, always assume ego vehicle strictly inside the
-            interpolate_target_distance = np.array([i * self.reference_speed * self.time_step  for i in range(self.steps)])
-            initial_offset = np.dot([pos_x, pos_y] - track_center[:,0], track_dir[:,0])    # distance ego ahead of track start point
+            interpolate_target_distance = np.array(
+                [i * speed * self.time_step for i in range(self.steps)]
+            )
+            initial_offset = np.dot(
+                [pos_x, pos_y] - track_center[:, 0],
+                track_dir[:, 0]
+            )    # distance ego ahead of track start point
             track_length = track_length - initial_offset
 
             desired_trajectory = np.zeros((2, self.steps))
-            desired_trajectory[0,:] = np.interp(interpolate_target_distance, track_length, track_center[0,:])
-            desired_trajectory[1,:] = np.interp(interpolate_target_distance, track_length, track_center[1,:])
+            desired_trajectory[0, :] = np.interp(
+                interpolate_target_distance,
+                track_length,
+                track_center[0, :]
+            )
+            desired_trajectory[1, :] = np.interp(
+                interpolate_target_distance,
+                track_length,
+                track_center[1, :]
+            )
             traj_msg = MultiDOFJointTrajectory()
             traj_msg.header.stamp = rospy.Time.now()
             traj_msg.header.frame_id = 'map'
