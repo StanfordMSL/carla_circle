@@ -6,9 +6,9 @@ from map_updater import OdometryState
 
 import rospy
 import tf
-from nav_msgs.msg import Odometry, Path, PoseStamped, Pose
+from nav_msgs.msg import Odometry, Path
 from carla_circle.msg import PathArray
-from geometry_msgs.msg import Transform, Vector3, Quaternion, Twist, Point
+from geometry_msgs.msg import Point, Pose, PoseStamped
 
 import numpy as np
 import math
@@ -26,8 +26,8 @@ class TrajectoryPredictor:
 
         Parameters
         ----------
-        time_step : int
-            The number of steps or segments of the total horizon.
+        time_step : float
+            The time between each consecutive pose in the trajectory.
         horizon : float
             The time horizon in which the prediction will be calculated.
         '''
@@ -60,7 +60,7 @@ class TrajectoryPredictor:
         traj_msg.header.frame_id = 'map'
         traj_msg.poses = []
 
-        for k in range(self.steps+1):
+        for k in range(self.steps + 1):
             # Fill position and velocity at time step k in the traj_msg
             dt = k*self.time_step
             xk = pos_x + dt*velocity[0]
@@ -69,7 +69,7 @@ class TrajectoryPredictor:
             # How do we want to stamp our messages? ROSTime+delta? Just delta?
             # Just ROSTime (default value when creating PoseStamped object?)
             pose_stamped = PoseStamped()
-            pose_stamped.header.stamp = traj_msg.header.stamp + dt
+            pose_stamped.header.stamp = dt
             pose_stamped.header.frame_id = 'map'
             pose_stamped.pose = Pose(
                 Point(xk, yk, self.state.z),
