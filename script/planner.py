@@ -13,7 +13,7 @@ from geometry_msgs.msg import Transform, Vector3, Quaternion, Twist
 import numpy as np
 import math
 
-from map_updater import odom_state
+from map_updater import OdometryState
 
 
 class TrajectoryPlanner:
@@ -42,7 +42,7 @@ class TrajectoryPlanner:
         self.circle_center = [-0.5, -0.3]  # center offset of the circle traj
 
         self.stateReady = False
-        self.state = odom_state(self.circle_center, self.circle_radius)
+        self.state = OdometryState(self.circle_center, self.circle_radius)
 
         # Subscribers for ego vehicle odometry and predicted trajectory
         rospy.Subscriber(

@@ -2,7 +2,7 @@
 
 # author: simonlc@stanford.edu
 
-from map_updater import odom_state
+from map_updater import OdometryState
 
 import rospy
 from nav_msgs.msg import Odometry, Path, PoseStamped, Pose
@@ -28,7 +28,7 @@ class TrajectoryPredictor:
         # this information is used to infer the possible time when the relevant
         # cars enter the roundabout
 
-        self.state = odom_state()
+        self.state = OdometryState()
         self.stateReady = False
 
         # subscribers, publishers

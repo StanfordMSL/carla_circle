@@ -12,7 +12,7 @@ from carla_msgs.msg import CarlaEgoVehicleInfo
 from scipy.spatial import KDTree
 import numpy as np
 
-from map_updater import odom_state
+from map_updater import OdometryState
 
 
 class AckermannController:
@@ -42,7 +42,7 @@ class AckermannController:
 
         # state information
         self.stateReady = False
-        self.state = odom_state()
+        self.state = OdometryState()
 
         # path tracking information
         self.pathReady = False

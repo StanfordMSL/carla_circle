@@ -75,7 +75,7 @@ def get_mcity_route(filename):
     return route
 
 
-class odom_state(object):
+class OdometryState(object):
     '''
     This class stores an instantaneous odometry state of the vehicle. All units
     are SI.
@@ -87,6 +87,9 @@ class odom_state(object):
         self.time = None
         self.x = None
         self.y = None
+        self.z = None
+        self.ori_quat = None
+        self.ori_euler = None
         self.yaw = None
         self.vx = None
         self.vy = None
@@ -105,14 +108,17 @@ class odom_state(object):
         self.time = odom_msg.header.stamp.to_sec()
         self.x = odom_msg.pose.pose.position.x
         self.y = odom_msg.pose.pose.position.y
-        ori_quat = (
+        self.z = odom_msg.pose.pose.position.z
+        self.ori_quat = (
             odom_msg.pose.pose.orientation.x,
             odom_msg.pose.pose.orientation.y,
             odom_msg.pose.pose.orientation.z,
             odom_msg.pose.pose.orientation.w
         )
-        ori_euler = tf.transformations.euler_from_quaternion(ori_quat)
-        self.yaw = ori_euler[2]
+        self.ori_euler = tf.transformations.euler_from_quaternion(
+            self.ori_quat
+        )
+        self.yaw = self.ori_euler[2]
         self.vx = odom_msg.twist.twist.linear.x
         self.vy = odom_msg.twist.twist.linear.y
         self.speed = np.sqrt(self.vx**2 + self.vy**2)
@@ -189,9 +195,9 @@ class MapUpdater:
 
         # state information
         self.stateReady = False
-        self.state = odom_state()
+        self.state = OdometryState()
         self.ado_stateReady = False
-        self.ado_state = odom_state()
+        self.ado_state = OdometryState()
 
         # path information
         self.ego_track_info = Path()

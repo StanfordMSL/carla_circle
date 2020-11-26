@@ -12,7 +12,7 @@ from geometry_msgs.msg import Transform, Vector3, Quaternion, Twist
 import numpy as np
 import math
 
-from map_updater import odom_state
+from map_updater import OdometryState
 
 
 class TrivialPlanner:
@@ -40,7 +40,7 @@ class TrivialPlanner:
         self.track_ready = False
 
         self.stateReady = False
-        self.state = odom_state()
+        self.state = OdometryState()
 
         # Subscribers for ego vehicle odometry and predicted trajectory
         rospy.Subscriber(
