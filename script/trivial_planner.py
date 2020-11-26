@@ -13,14 +13,15 @@ import numpy as np
 import math
 
 from map_updater import OdometryState
+from predictor_module import TrajectoryPredictor
 
 
 class TrivialPlanner:
     '''
     A ROS node used to publish a trajectory for ego vehicle.
 
-    Minimum planning task: takes in a path (possibly lane center), and interpolates it based
-    on current velocity to get a trajectory,
+    Minimum planning task: takes in a path (possibly lane center), and
+    interpolates it based on current velocity to get a trajectory,
     '''
     MAX_ACCELERATION = 3
     MAX_ACCELERATION_ANG = 3 / 19.5
@@ -41,6 +42,9 @@ class TrivialPlanner:
 
         self.stateReady = False
         self.state = OdometryState()
+
+        # Predictor
+        self.traj_predictor = TrajectoryPredictor(self.time_step, self.horizon)
 
         # Subscribers for ego vehicle odometry and predicted trajectory
         rospy.Subscriber(
@@ -117,21 +121,23 @@ class TrivialPlanner:
             traj_msg.header.stamp = rospy.Time.now()
             traj_msg.header.frame_id = 'map'
             traj_msg.points = []
+
             for i in range(self.steps):
                 traj_point = MultiDOFJointTrajectoryPoint()
                 traj_point.transforms = [
                     Transform(
                         Vector3(
-                            desired_trajectory[0,i],
-                            desired_trajectory[1,i], 0
+                            desired_trajectory[0, i],
+                            desired_trajectory[1, i],
+                            0.0
                         ),
-                        Quaternion(0, 0, 0, 1)
+                        Quaternion(0.0, 0.0, 0.0, 1.0)
                     )
                 ]
                 traj_point.velocities = [
                     Twist(
-                        Vector3(self.reference_speed, 0, 0),
-                        Vector3(0, 0, 0)
+                        Vector3(speed, 0.0, 0.0),
+                        Vector3(0.0, 0.0, 0.0)
                     )
                 ]
                 traj_msg.points.append(traj_point)
