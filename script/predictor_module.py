@@ -49,6 +49,10 @@ class TrajectoryPredictor:
         msg : Odometry
             The current Odometry information of the object in which to predict
             its trajectory.
+
+        Output
+        ---------------------
+        predicted Path based on current position and velocity
         '''
         self.state.update_vehicle_state(msg)
 
@@ -78,3 +82,4 @@ class TrajectoryPredictor:
             traj_msg.poses.append(pose_stamped)
 
         self.predicted_traj = traj_msg
+        return traj_msg
