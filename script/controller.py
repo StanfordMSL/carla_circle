@@ -139,7 +139,7 @@ class AckermannController:
         This is a callback for the class timer, which will be called every
         tick.
 
-        The callback calculates the target values of the AckermannDrive
+        The callback calculates the desired parameters of the AckermannDrive
         message and publishes the command to the ego vehicle's Ackermann
         control topic.
 
@@ -185,10 +185,9 @@ class AckermannController:
             else:
                 target_vel = self.vel_path[-1, :]
 
-            desired_speed = np.linalg.norm(target_vel)
-            current_speed = self.state.get_speed()
-            speed_diff = desired_speed - current_speed
-            rospy.logdebug("Speed difference: {}".format(speed_diff))
+            (
+                desired_speed, desired_acceleration, desired_jerk
+            ) = self.compute_ackermann_long_params(target_vel)
 
             desired_steer = self.compute_ackermann_steer(target_pt)
             steer_diff = abs(desired_steer - self.steer_prev)
