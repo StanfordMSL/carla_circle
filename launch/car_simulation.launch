@@ -14,7 +14,8 @@
 	<arg name="time_step" value="$(eval arg('plan_horizon')/arg('plan_steps'))" />
 
 	<group ns="$(arg rolename)">
-
+		<!-- Controller "Mode". To determine state controller is in. 0 = Normal Mode-->
+		<param name="ctr_mode" value="0" />
 
 		<!-- Mapper node - publish local track
 			center and track width for two cars -->
@@ -30,6 +31,7 @@
 			<param name="time_step" value="$(arg time_step)" />
 			<param name="horizon" value="$(arg plan_horizon)" />
 			<param name="max_speed" value="$(arg max_speed)" />
+			<param name="update_frequency" value="10.0" />
 		</node>
 
 

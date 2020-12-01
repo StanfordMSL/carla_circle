@@ -5,14 +5,9 @@
 from map_updater import OdometryState
 
 import rospy
-import tf
-from nav_msgs.msg import Odometry, Path
-from carla_circle.msg import PathArray
+from nav_msgs.msg import Path
 from geometry_msgs.msg import Point, Pose, PoseStamped
-
-import numpy as np
-import math
-import timeit
+from visualization_msgs.msg import Marker
 
 
 class TrajectoryPredictor:
@@ -82,4 +77,34 @@ class TrajectoryPredictor:
             traj_msg.poses.append(pose_stamped)
 
         self.predicted_traj = traj_msg
+        self.visualize_trajectory(msg.child_frame_id)
+
         return traj_msg
+
+    def visualize_trajectory(self, label):
+        '''
+        Visualizes the last predicted trajectory in RVIZ.
+        '''
+        marker = Marker()
+        marker.ns = label
+        marker.header.stamp = rospy.Time.now()
+        marker.header.frame_id = 'map'
+        marker.type = Marker.LINE_STRIP
+        marker.scale.x = 0.6
+        marker.scale.y = 0.6
+        marker.scale.z = 0.6
+        marker.color.r = 1.0
+        marker.color.g = 1.0
+        marker.color.b = 0.0
+        marker.color.a = 1.0
+
+        for pose_stamped in self.predicted_traj.poses:
+            marker.points.append(pose_stamped.pose.position)
+
+        # Create a publisher for visualization
+        pred_pub = rospy.Publisher(
+            '/carla/vehicle/{}/trajectory'.format(label),
+            Marker,
+            queue_size=1
+        )
+        pred_pub.publish(marker)

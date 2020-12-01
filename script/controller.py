@@ -2,7 +2,6 @@
 # author: mingyuw@stanford.edu
 
 import rospy
-import tf
 from nav_msgs.msg import Odometry
 from trajectory_msgs.msg import MultiDOFJointTrajectory
 from ackermann_msgs.msg import AckermannDrive
@@ -13,6 +12,13 @@ from scipy.spatial import KDTree
 import numpy as np
 
 from map_updater import OdometryState
+
+MAX_ACCELERATION = 3.0
+MAX_JERK = 1.3
+SPEED_THRESHOLD = 1.0e-4
+
+MODE_NORMAL = 0
+MODE_EMERGENCY = 1
 
 
 class AckermannController:
@@ -146,62 +152,52 @@ class AckermannController:
         '''
         current_time = rospy.get_time()
         # delta_t = current_time - self.time
-        delta_t = self.time_step
+        # delta_t = self.time_step
         # delta_t = 0.05
         self.time = current_time
-        jerk = 2.0
+        acceleration = 0.0
+        jerk = MAX_JERK
+        ctr_mode = rospy.get_param("ctr_mode")
 
         # Initializes the AckermannDrive message; All values 0 unless specified
         cmd_msg = AckermannDrive()
-        cmd_msg.jerk = jerk
 
-        if self.pathReady and self.stateReady:
+        if self.pathReady and self.stateReady and ctr_mode != MODE_EMERGENCY:
             pos_x, pos_y = self.state.get_position()
 
             # Pick target w/o collision avoidance. Find the closest point in
             # the trajectory tree.
             _, idx = self.path_tree.query([pos_x, pos_y])
 
-            # Steering target. Three points ahead of closest point.
-            if idx < self.traj_steps - 3:
-                target_pt = self.path_tree.data[idx + 3, :]
+            # Steering target. Some points ahead of closest point.
+            points_ahead = 4
+            if idx < self.traj_steps - points_ahead:
+                target_pt = self.path_tree.data[idx + points_ahead, :]
             else:
                 target_pt = self.path_tree.data[-1, :]
                 rospy.logwarn("At the end of the desired waypoints!")
 
             # Velocity target. Use the desired velocity from closest point.
-            if idx < self.traj_steps:
-                target_vel = self.vel_path[idx, :]
+            points_ahead = 0
+            if idx < self.traj_steps - points_ahead:
+                target_vel = self.vel_path[idx + points_ahead, :]
             else:
                 target_vel = self.vel_path[-1, :]
 
             target_speed = np.linalg.norm(target_vel)
+            current_speed = self.state.get_speed()
+            speed_diff = target_speed - current_speed
+            rospy.logdebug("Speed difference: {}".format(speed_diff))
 
-            speed_diff = target_speed - self.state.get_speed()
-            acceleration = abs(speed_diff) / (2.0 * delta_t)
-            cmd_msg.acceleration = np.min([1.5, acceleration])
             steer = self.compute_ackermann_steer(target_pt)
-
             steer_diff = abs(steer - self.steer_prev)
-            rospy.logdebug("Steering difference: %f", steer_diff)
+            rospy.logdebug("Steering difference: {}".format(steer_diff))
 
             if steer_diff >= 0.3:
                 rospy.logdebug("Large difference; Use last steering command")
                 steer = self.steer_prev
-            elif steer_diff >= 0.05:
-                acceleration = 0.0
-                target_speed = target_speed / 5.0
 
             self.steer_prev = steer
-
-            if self.state.get_speed() - target_speed > 0.0:
-                acceleration = -100.0
-                cmd_msg.speed = target_speed / 5.0
-                jerk = 1000.0
-            elif target_speed - self.state.get_speed() > 0.2:
-                acceleration = np.min([3.0, acceleration])
-            else:
-                acceleration = 0.0
 
             cmd_msg.steering_angle = steer
             cmd_msg.speed = target_speed
@@ -209,19 +205,7 @@ class AckermannController:
             cmd_msg.jerk = jerk
 
             # For visualization purposes and debuging control node
-            mk_msg = Marker()
-            mk_msg.header.stamp = rospy.Time.now()
-            mk_msg.header.frame_id = 'map'
-            mk_msg.pose.position.x = target_pt[0]
-            mk_msg.pose.position.y = target_pt[1]
-            mk_msg.type = Marker.CUBE
-            mk_msg.scale.x = 3
-            mk_msg.scale.y = 3
-            mk_msg.scale.z = 3
-            mk_msg.color.a = 1.0
-            mk_msg.color.r = 1
-            mk_msg.color.b = 1
-            self.tracking_pt_viz_pub.publish(mk_msg)
+            self.publish_markers(target_pt)
 
         # self.vehicle_cmd_pub.publish(vehicle_cmd_msg)
         self.command_pub.publish(cmd_msg)
@@ -253,7 +237,7 @@ class AckermannController:
         speed_diff = desired_speed - self.state.get_speed()
         acceleration = abs(speed_diff) / (2.0 * self.time_step)
 
-        desired_acceleration = acceleration
+        desired_acceleration = np.min([MAX_ACCELERATION, acceleration])
 
         return (desired_speed, desired_acceleration, desired_jerk)
 
@@ -299,6 +283,21 @@ class AckermannController:
         self.steer_cache = steer
 
         return steer
+
+    def publish_markers(self, target_pt):
+        mk_msg = Marker()
+        mk_msg.header.stamp = rospy.Time.now()
+        mk_msg.header.frame_id = 'map'
+        mk_msg.pose.position.x = target_pt[0]
+        mk_msg.pose.position.y = target_pt[1]
+        mk_msg.type = Marker.CUBE
+        mk_msg.scale.x = 3
+        mk_msg.scale.y = 3
+        mk_msg.scale.z = 3
+        mk_msg.color.a = 1.0
+        mk_msg.color.r = 1
+        mk_msg.color.b = 1
+        self.tracking_pt_viz_pub.publish(mk_msg)
 
 
 if __name__ == '__main__':

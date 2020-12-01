@@ -152,6 +152,16 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: map
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /carla/marker
+      Name: Objects
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
+      Enabled: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 80; 80; 80

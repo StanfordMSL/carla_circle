@@ -13,6 +13,9 @@ import numpy as np
 from map_updater import OdometryState
 from predictor_module import TrajectoryPredictor
 
+MODE_NORMAL = 0
+MODE_EMERGENCY = 1
+
 
 class TrivialPlanner:
     '''
@@ -32,7 +35,8 @@ class TrivialPlanner:
         self.time_step = rospy.get_param("~time_step")
         self.horizon = rospy.get_param("~horizon")
         self.steps = int(self.horizon / self.time_step)
-        self.reference_speed = rospy.get_param("~max_speed")
+        self.speed_limit = rospy.get_param("~max_speed")
+        self.freq = rospy.get_param("~update_frequency")
 
         # class attributes
         self.track = Path()  # predicted trajs for ego cars
@@ -41,7 +45,8 @@ class TrivialPlanner:
         self.state = OdometryState()
         self.stateReady = False
 
-        self.other_agents = []    # list of odometry information of other vehicles in the simulation
+        # list of odometry information of other vehicles in the simulation
+        self.other_agents = []
 
         # Predictor
         self.traj_predictor = TrajectoryPredictor(self.time_step, self.horizon)
@@ -62,14 +67,19 @@ class TrivialPlanner:
             ObjectArray,
             self.other_agents_cb
         )
+
         # Publisher for desired waypoints
         self.trajectory_pub = rospy.Publisher(
             "ego/command/trajectory",
             MultiDOFJointTrajectory,
             queue_size=10
         )
+
         # Main timer for planner
-        self.timer = rospy.Timer(rospy.Duration(1.0), self.timer_cb)
+        self.timer = rospy.Timer(
+            rospy.Duration(1.0 / self.freq),
+            self.timer_cb
+        )
 
     '''
     this function updates the ego vehicle state in class
@@ -94,10 +104,10 @@ class TrivialPlanner:
             odo_msg = Odometry()
 
             odo_msg.header = obj.header
+            odo_msg.child_frame_id = '{:03d}'.format(obj.id)
             odo_msg.pose.pose = obj.pose
             odo_msg.twist.twist = obj.twist
             self.other_agents.append(odo_msg)
-
 
     def get_track_info(self):
         num_track_points = len(self.track.poses) - 1
@@ -127,39 +137,58 @@ class TrivialPlanner:
         return track_center, track_width, track_dir, track_length
 
     def timer_cb(self, event):
-        # interpolate path using max speed or current speed
+        # Interpolate path using max speed or current speed
         if self.stateReady and self.track_ready:
+            rospy.set_param('ctr_mode', MODE_NORMAL)
             pos_x, pos_y = self.state.get_position()
-            speed = self.reference_speed
+            speed_limit = self.speed_limit
+            current_speed = self.state.get_speed()
 
-            track_center, track_width, track_dir, track_length  = self.get_track_info()
+            (
+                track_center, track_width, track_dir, track_length
+            ) = self.get_track_info()
 
-            # based on position of other agents, decide if we should follow the
+            # Based on position of other agents, decide if we should follow the
             # current speed or stop the vehicle
             stop_flag = False
+
             def check_interaction(other_traj, ego_traj):
                 '''
                 input:
                     -- other_traj: Path
-                       predicted trajectory of one other vehicle, starting from its current position
-                       dt is self.time_step
+                       predicted trajectory of one other vehicle, starting from
+                       its current position dt is self.time_step
                     -- ego_traj: 2 x n numpy array
-                       trajectory of ego vehicle, starting from current position, dt is self.time_step
+                       trajectory of ego vehicle, starting from current
+                       position, dt is self.time_step
                 '''
                 for t in range(self.steps - 1):
-                    other_position = [other_traj.poses[t].position.x, other_traj.poses[t].position.y]
-                    positive_direction = ego_traj[:,t + 1] - ego_traj[:,t]
-                    if np.norm(other_position - ego_traj[:,t]) < 5.0 and np.dot(other_position - ego_traj[:,t], positive_direction) > 0:
+                    other_position = [
+                        other_traj.poses[t].pose.position.x,
+                        other_traj.poses[t].pose.position.y
+                    ]
+                    positive_direction = ego_traj[:, t + 1] - ego_traj[:, t]
+
+                    if (
+                        np.linalg.norm(other_position - ego_traj[:, t]) < 5.0
+                        and np.dot(
+                            other_position - ego_traj[:, t],
+                            positive_direction
+                        ) > 0
+                    ):
                         return True
+
                 return False
 
-            # if we follow the current speed
+            # If we follow the current speed
+            target_speed = np.array([speed_limit for i in range(self.steps)])
             interpolate_target_distance = np.array(
-                [i * speed * self.time_step for i in range(self.steps)])
+                [i * speed_limit * self.time_step for i in range(self.steps)]
+            )
             initial_offset = np.dot(
                 [pos_x, pos_y] - track_center[:, 0],
                 track_dir[:, 0]
-            )    # distance ego ahead of track start point
+            )    # Distance ego is ahead of track start point
             track_length = track_length - initial_offset
             desired_trajectory = np.zeros((2, self.steps))
             desired_trajectory[0, :] = np.interp(
@@ -172,22 +201,38 @@ class TrivialPlanner:
                 track_length,
                 track_center[1, :]
             )
-            # check if there are any possible collisions along the current trajectory
+
+            # Any possible collisions along the current trajectory?
             for odo in self.other_agents:
-                pred_trajectory = self.traj_predictor(odo)
+                pred_trajectory = self.traj_predictor.update_prediction(odo)
+
                 if check_interaction(pred_trajectory, desired_trajectory):
                     stop_flag = True
+                    rospy.logwarn("Potential collision.")
                     break
 
-
             if stop_flag:
-                # apply braking maneuver
+                # Apply braking maneuver
+                rospy.set_param('ctr_mode', MODE_EMERGENCY)
                 target_speed = np.array(
-                    [max(speed + MAX_DECCELERATION * i * self.time_step, 0.0) for i in range(self.steps)]
+                    [
+                        max(
+                            (
+                                current_speed +
+                                self.MAX_DECCELERATION*i*self.time_step
+                            ),
+                            0.0
+                        )
+                        for i in range(self.steps)
+                    ]
                 )
                 interpolate_target_distance = np.zeros((self.steps))
-                for i in range(i, self.steps):
-                    interpolate_target_distance[i] = interpolate_target_distance[i-1] + self.time_step * target_speed[i-1]
+
+                for i in range(1, self.steps):
+                    interpolate_target_distance[i] = (
+                        interpolate_target_distance[i - 1] +
+                        self.time_step * target_speed[i - 1]
+                    )
 
                 desired_trajectory = np.zeros((2, self.steps))
                 desired_trajectory[0, :] = np.interp(
@@ -201,11 +246,11 @@ class TrivialPlanner:
                     track_center[1, :]
                 )
 
-
             traj_msg = MultiDOFJointTrajectory()
             traj_msg.header.stamp = rospy.Time.now()
             traj_msg.header.frame_id = 'map'
             traj_msg.points = []
+            rospy.logdebug("Target speed: {}".format(target_speed))
 
             for i in range(self.steps):
                 traj_point = MultiDOFJointTrajectoryPoint()
@@ -221,7 +266,7 @@ class TrivialPlanner:
                 ]
                 traj_point.velocities = [
                     Twist(
-                        Vector3(speed, 0.0, 0.0),
+                        Vector3(target_speed[i], 0.0, 0.0),
                         Vector3(0.0, 0.0, 0.0)
                     )
                 ]
