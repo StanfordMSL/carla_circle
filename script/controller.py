@@ -13,12 +13,10 @@ import numpy as np
 
 from map_updater import OdometryState
 
-MAX_ACCELERATION = 3.0
-MAX_JERK = 1.3
-SPEED_THRESHOLD = 1.0e-4
-
-MODE_NORMAL = 0
-MODE_EMERGENCY = 1
+# Import some constants
+from constants import MODE_EMERGENCY
+from constants import MAX_ACCELERATION, MAX_DECELERATION, MAX_JERK
+from constants import FREEFLOW_SPEED
 
 
 class AckermannController:
@@ -155,8 +153,11 @@ class AckermannController:
         # delta_t = self.time_step
         # delta_t = 0.05
         self.time = current_time
-        acceleration = 0.0
-        jerk = MAX_JERK
+        desired_steer = 0.0
+        desired_speed = 0.0
+        desired_acceleration = 0.0
+        desired_jerk = 0.0
+
         ctr_mode = rospy.get_param("ctr_mode")
 
         # Initializes the AckermannDrive message; All values 0 unless specified
@@ -184,25 +185,25 @@ class AckermannController:
             else:
                 target_vel = self.vel_path[-1, :]
 
-            target_speed = np.linalg.norm(target_vel)
+            desired_speed = np.linalg.norm(target_vel)
             current_speed = self.state.get_speed()
-            speed_diff = target_speed - current_speed
+            speed_diff = desired_speed - current_speed
             rospy.logdebug("Speed difference: {}".format(speed_diff))
 
-            steer = self.compute_ackermann_steer(target_pt)
-            steer_diff = abs(steer - self.steer_prev)
+            desired_steer = self.compute_ackermann_steer(target_pt)
+            steer_diff = abs(desired_steer - self.steer_prev)
             rospy.logdebug("Steering difference: {}".format(steer_diff))
 
             if steer_diff >= 0.3:
                 rospy.logdebug("Large difference; Use last steering command")
-                steer = self.steer_prev
+                desired_steer = self.steer_prev
 
-            self.steer_prev = steer
+            self.steer_prev = desired_steer
 
-            cmd_msg.steering_angle = steer
-            cmd_msg.speed = target_speed
-            cmd_msg.acceleration = acceleration
-            cmd_msg.jerk = jerk
+            cmd_msg.steering_angle = desired_steer
+            cmd_msg.speed = desired_speed
+            cmd_msg.acceleration = desired_acceleration
+            cmd_msg.jerk = desired_jerk
 
             # For visualization purposes and debuging control node
             self.publish_markers(target_pt)

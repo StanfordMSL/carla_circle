@@ -13,8 +13,9 @@ import numpy as np
 from map_updater import OdometryState
 from predictor_module import TrajectoryPredictor
 
-MODE_NORMAL = 0
-MODE_EMERGENCY = 1
+# Import some constants
+from constants import MODE_NORMAL, MODE_EMERGENCY
+from constants import MAX_ACCELERATION, MAX_DECELERATION
 
 
 class TrivialPlanner:
@@ -24,9 +25,6 @@ class TrivialPlanner:
     Minimum planning task: takes in a path (possibly lane center), and
     interpolates it based on current velocity to get a trajectory,
     '''
-    MAX_ACCELERATION = 3.0
-    MAX_DECCELERATION = -3.0
-
     def __init__(self):
         rospy.init_node("planner", anonymous=True)
 
@@ -189,8 +187,8 @@ class TrivialPlanner:
                     [
                         max(
                             (
-                                current_speed +
-                                self.MAX_DECCELERATION*i*self.time_step
+                                current_speed -
+                                MAX_DECELERATION*i*self.time_step
                             ),
                             0.0
                         )
