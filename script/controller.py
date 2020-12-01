@@ -235,10 +235,22 @@ class AckermannController:
         desired_speed = np.linalg.norm(target_velocity)
 
         # Calculate the desired acceleration
-        speed_diff = desired_speed - self.state.get_speed()
-        acceleration = abs(speed_diff) / (2.0 * self.time_step)
+        current_speed = self.state.get_speed()
+        speed_diff = desired_speed - current_speed
+        acceleration = speed_diff * FREEFLOW_SPEED
+        desired_acceleration = np.clip(
+            acceleration, -MAX_DECELERATION, MAX_ACCELERATION
+        )
 
-        desired_acceleration = np.min([MAX_ACCELERATION, acceleration])
+        # Calculate desired jerk
+        jerk = 0.0
+        desired_jerk = np.clip(jerk, 0.0, MAX_JERK)
+
+        rospy.logdebug(
+            "Desired long parameters (speed, accel, jerk): {}, {}, {}".format(
+                desired_speed, desired_acceleration, desired_jerk
+            )
+        )
 
         return (desired_speed, desired_acceleration, desired_jerk)
 
