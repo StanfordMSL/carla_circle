@@ -152,34 +152,6 @@ class TrivialPlanner:
             # current speed or stop the vehicle
             stop_flag = False
 
-            def check_interaction(other_traj, ego_traj):
-                '''
-                input:
-                    -- other_traj: Path
-                       predicted trajectory of one other vehicle, starting from
-                       its current position dt is self.time_step
-                    -- ego_traj: 2 x n numpy array
-                       trajectory of ego vehicle, starting from current
-                       position, dt is self.time_step
-                '''
-                for t in range(self.steps - 1):
-                    other_position = [
-                        other_traj.poses[t].pose.position.x,
-                        other_traj.poses[t].pose.position.y
-                    ]
-                    positive_direction = ego_traj[:, t + 1] - ego_traj[:, t]
-
-                    if (
-                        np.linalg.norm(other_position - ego_traj[:, t]) < 5.0
-                        and np.dot(
-                            other_position - ego_traj[:, t],
-                            positive_direction
-                        ) > 0
-                    ):
-                        return True
-
-                return False
-
             # If we follow the current speed
             target_speed = np.array([speed_limit for i in range(self.steps)])
             interpolate_target_distance = np.array(
@@ -206,9 +178,8 @@ class TrivialPlanner:
             for odo in self.other_agents:
                 pred_trajectory = self.traj_predictor.update_prediction(odo)
 
-                if check_interaction(pred_trajectory, desired_trajectory):
+                if self.check_interaction(pred_trajectory, desired_trajectory):
                     stop_flag = True
-                    rospy.logwarn("Potential collision.")
                     break
 
             if stop_flag:
@@ -273,6 +244,40 @@ class TrivialPlanner:
                 traj_msg.points.append(traj_point)
 
             self.trajectory_pub.publish(traj_msg)
+
+    def check_interaction(self, other_traj, ego_traj):
+        '''
+        Checks the trajectories of two objects and determines if there is a
+        potential collision.
+
+        Assumes dt is our planner's time_step.
+
+        Parameters
+        ----------
+        other_traj: Path
+            The predicted trajectory of one other vehicle, starting from its
+            current position.
+        ego_traj: 2 x n numpy array
+            The trajectory of ego vehicle, starting from its current position.
+        '''
+        for t in range(self.steps - 1):
+            other_position = [
+                other_traj.poses[t].pose.position.x,
+                other_traj.poses[t].pose.position.y
+            ]
+            positive_direction = ego_traj[:, t + 1] - ego_traj[:, t]
+
+            if (
+                np.linalg.norm(other_position - ego_traj[:, t]) < 5.0
+                and np.dot(
+                    other_position - ego_traj[:, t],
+                    positive_direction
+                ) > 0
+            ):
+                rospy.logwarn("Potential collision...")
+                return True
+
+        return False
 
 
 if __name__ == '__main__':
