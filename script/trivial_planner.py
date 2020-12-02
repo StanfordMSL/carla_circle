@@ -177,6 +177,9 @@ class TrivialPlanner:
                 pred_trajectory = self.traj_predictor.update_prediction(odo)
 
                 if self.check_interaction(pred_trajectory, desired_trajectory):
+                    rospy.logdebug(
+                        "   Collision with {}".format(odo.child_frame_id)
+                    )
                     stop_flag = True
                     break
 
@@ -263,16 +266,28 @@ class TrivialPlanner:
                 other_traj.poses[t].pose.position.x,
                 other_traj.poses[t].pose.position.y
             ]
+            relative_position = other_position - ego_traj[:, t]
             positive_direction = ego_traj[:, t + 1] - ego_traj[:, t]
+            long_unit_vec = positive_direction / np.linalg.norm(
+                positive_direction
+            )
+            lateral_unit_vec = np.array([-long_unit_vec[1], long_unit_vec[0]])
+
+            lateral_dist = abs(np.dot(relative_position, lateral_unit_vec))
+            longitudinal_dist = np.dot(relative_position, long_unit_vec)
 
             if (
-                np.linalg.norm(other_position - ego_traj[:, t]) < 3.25
-                and np.dot(
-                    other_position - ego_traj[:, t],
-                    positive_direction
-                ) > 0
+                lateral_dist <= 2.5 and
+                longitudinal_dist >= 0.0 and longitudinal_dist <= 5.0
             ):
                 rospy.logwarn("Potential collision...")
+                rospy.logdebug(
+                    "Lat: {}, Long: {}".format(
+                        lateral_dist, longitudinal_dist
+                    )
+                )
+                rospy.logdebug("Ego Traj[{}]: {}".format(t, ego_traj[:, t]))
+                rospy.logdebug("Other Traj[{}]: {}".format(t, other_position))
                 return True
 
         return False
