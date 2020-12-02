@@ -7,7 +7,7 @@ from trajectory_msgs.msg import MultiDOFJointTrajectory
 from ackermann_msgs.msg import AckermannDrive
 from visualization_msgs.msg import Marker
 
-from carla_msgs.msg import CarlaEgoVehicleInfo
+from carla_msgs.msg import CarlaEgoVehicleControl, CarlaEgoVehicleInfo
 from scipy.spatial import KDTree
 import numpy as np
 
@@ -55,6 +55,7 @@ class AckermannController:
         self.vel_path = np.zeros(shape=(self.traj_steps, 2))
 
         self.steer_cache = None
+        self.override_cmd = CarlaEgoVehicleControl()
 
         # PID controller parameter
         self.pid_str_prop = rospy.get_param("~str_prop")
@@ -71,6 +72,11 @@ class AckermannController:
             MultiDOFJointTrajectory,
             self.desired_waypoints_cb
         )
+        rospy.Subscriber(
+            "/carla/{}/vehicle_control_cmd".format(rolename),
+            CarlaEgoVehicleControl,
+            self.carla_ego_control_cb
+        )
 
         # Publishers
         self.command_pub = rospy.Publisher(
@@ -82,6 +88,11 @@ class AckermannController:
             "tracking_point_mkr",
             Marker,
             queue_size=10
+        )
+        self.override_control_pub = rospy.Publisher(
+            "/carla/{}/vehicle_control_cmd".format(rolename),
+            CarlaEgoVehicleControl,
+            queue_size=1
         )
 
         topic = "/carla/{}/vehicle_info".format(rolename)
@@ -97,6 +108,9 @@ class AckermannController:
             rospy.Duration(1.0/ctrl_freq),
             self.timer_cb
         )
+
+    def carla_ego_control_cb(self, msg):
+        self.override_cmd = msg
 
     def desired_waypoints_cb(self, msg):
         '''
@@ -206,6 +220,10 @@ class AckermannController:
 
             # For visualization purposes and debuging control node
             self.publish_markers(target_pt)
+
+        if ctr_mode == MODE_EMERGENCY:
+            self.override_cmd.brake = 1.0
+            self.override_control_pub.publish(self.override_cmd)
 
         # self.vehicle_cmd_pub.publish(vehicle_cmd_msg)
         self.command_pub.publish(cmd_msg)

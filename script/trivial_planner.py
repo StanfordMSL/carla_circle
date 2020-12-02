@@ -266,7 +266,7 @@ class TrivialPlanner:
             positive_direction = ego_traj[:, t + 1] - ego_traj[:, t]
 
             if (
-                np.linalg.norm(other_position - ego_traj[:, t]) < 5.0
+                np.linalg.norm(other_position - ego_traj[:, t]) < 3.25
                 and np.dot(
                     other_position - ego_traj[:, t],
                     positive_direction

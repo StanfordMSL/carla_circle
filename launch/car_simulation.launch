@@ -12,6 +12,7 @@
 	<arg name="plan_horizon" default="3.0" />
 	<arg name="plan_steps" default="10" />
 	<arg name="time_step" value="$(eval arg('plan_horizon')/arg('plan_steps'))" />
+	<arg name="spawn_ego" default="True" />
 
 	<group ns="$(arg rolename)">
 		<!-- Controller "Mode". To determine state controller is in. 0 = Normal Mode-->
@@ -55,7 +56,7 @@
 			<param name="vehicle_filter" value="vehicle.toyota.*" />
 			<param name="role_name" value="$(arg rolename)" />
 			<param name="spawn_point" value="$(arg spawn_point)" />
-			<param name="spawn_ego_vehicle" value="True" />
+			<param name="spawn_ego_vehicle" value="$(arg spawn_ego)" />
 			<param name="color" value="$(arg color)" />
 		</node>
 	</group>
