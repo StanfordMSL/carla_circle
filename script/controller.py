@@ -211,6 +211,16 @@ class AckermannController:
                 rospy.logdebug("Large difference; Use last steering command")
                 desired_steer = self.steer_prev
 
+            # Reduce the desired speed when taking sharp turns
+            if abs(desired_steer) >= 0.2:
+                desired_speed *= 0.75
+                self.override_cmd.hand_brake = True
+                self.override_control_pub.publish(self.override_cmd)
+            elif abs(desired_steer) >= 0.1:
+                desired_speed *= 0.85
+            elif abs(desired_steer) >= 0.05:
+                desired_speed *= 0.90
+
             self.steer_prev = desired_steer
 
             cmd_msg.steering_angle = desired_steer
@@ -223,9 +233,9 @@ class AckermannController:
 
         if ctr_mode == MODE_EMERGENCY:
             self.override_cmd.brake = 1.0
+            self.override_cmd.throttle = 0.0
             self.override_control_pub.publish(self.override_cmd)
 
-        # self.vehicle_cmd_pub.publish(vehicle_cmd_msg)
         self.command_pub.publish(cmd_msg)
 
     def compute_ackermann_long_params(self, target_velocity):

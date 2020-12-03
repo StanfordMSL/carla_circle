@@ -323,7 +323,6 @@ class MapUpdater:
             track_center = self.global_path.data[
                 idx - 1: idx + self.steps - 1, :
             ].T.copy()
-        track_center[1, :] = track_center[1, :]
 
         rospy.logdebug(
             "Track:\nCenters - {}\nWidth - {}".format(
@@ -348,8 +347,11 @@ class MapUpdater:
         for i in range(self.steps):
             pose_s = PoseStamped()
             pose_s.header = self.ego_track_info.header
-            pose_s.pose.position.x = track_c[0, i]
-            pose_s.pose.position.y = track_c[1, i]
+            # TODO: This shouldn't  be necessary. Only needed because length of
+            # track centers less than self.steps when global path has ended.
+            if i < len(track_c[0, :]):
+                pose_s.pose.position.x = track_c[0, i]
+                pose_s.pose.position.y = track_c[1, i]
             self.ego_track_info.poses.append(pose_s)
 
         # append the track width info as the last element of path.poses
