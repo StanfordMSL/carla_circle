@@ -12,22 +12,28 @@ import numpy as np
 import carla
 
 
-
 class RoadGeometryVisualization(object):
-    def __init__(self,carla_world, res=2.0):
+    def __init__(self, carla_world, res=2.0):
         rospy.init_node("network_viz", anonymous=True)
         self.world = carla_world
         self.map = carla_world.get_map()
 
-        waypoints =self.map.generate_waypoints(res)
+        waypoints = self.map.generate_waypoints(res)
         wp_mat = []
         for wyp in waypoints:
-            wp_mat.append([wyp.transform.location.x, -wyp.transform.location.y])
+            wp_mat.append(
+                [wyp.transform.location.x, -wyp.transform.location.y]
+            )
         self.waypoints_mat = np.asarray(wp_mat)
 
-        self.pub = rospy.Publisher("/carla/viz/road_geometry", Marker, queue_size=10)
+        self.pub = rospy.Publisher(
+            "/carla/viz/road_geometry",
+            Marker,
+            queue_size=10
+        )
 
         self.run()
+
     def run(self):
         mk = Marker()
         mk.header.stamp = rospy.Time.now()
@@ -38,14 +44,17 @@ class RoadGeometryVisualization(object):
         mk.scale.z = 0.4
         mk.color.a = 1
         for i in range(self.waypoints_mat.shape[0]):
-            mk.points.append(Point(self.waypoints_mat[i,0], self.waypoints_mat[i,1], 0))
+            mk.points.append(
+                Point(self.waypoints_mat[i, 0], self.waypoints_mat[i, 1], 0.0)
+            )
 
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():
             self.pub.publish(mk)
             rate.sleep()
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     host = rospy.get_param("/carla/host", "localhost")
     port = rospy.get_param("/carla/port", 2000)
 
