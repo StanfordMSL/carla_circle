@@ -9,6 +9,7 @@
 	<arg name="opp_speed" default="8.0" />
 	<arg name="plan_horizon" default="3.0" />
 	<arg name="plan_steps" default="10" />
+	<arg name="spawn_ego" default="True" />
 
 	<!-- bridge -->
 	<include file="$(find carla_ros_bridge)/launch/carla_ros_bridge.launch">
@@ -25,6 +26,7 @@
 		<arg name="opp_speed" value="$(arg opp_speed)" />
 		<arg name="plan_horizon" value="$(arg plan_horizon)" />
 		<arg name="plan_steps" value="$(arg plan_steps)" />
+		<arg name="spawn_ego" value="$(arg spawn_ego)" />
 	</include>
 
 	<!-- visualization -->

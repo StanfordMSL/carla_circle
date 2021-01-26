@@ -2,17 +2,21 @@
 # author: mingyuw@stanford.edu
 
 import rospy
-import tf
 from nav_msgs.msg import Odometry
 from trajectory_msgs.msg import MultiDOFJointTrajectory
 from ackermann_msgs.msg import AckermannDrive
 from visualization_msgs.msg import Marker
 
-from carla_msgs.msg import CarlaEgoVehicleInfo
+from carla_msgs.msg import CarlaEgoVehicleControl, CarlaEgoVehicleInfo
 from scipy.spatial import KDTree
 import numpy as np
 
 from map_updater import OdometryState
+
+# Import some constants
+from constants import MODE_EMERGENCY
+from constants import MAX_ACCELERATION, MAX_DECELERATION, MAX_JERK
+from constants import FREEFLOW_SPEED
 
 
 class AckermannController:
@@ -51,6 +55,7 @@ class AckermannController:
         self.vel_path = np.zeros(shape=(self.traj_steps, 2))
 
         self.steer_cache = None
+        self.override_cmd = CarlaEgoVehicleControl()
 
         # PID controller parameter
         self.pid_str_prop = rospy.get_param("~str_prop")
@@ -67,6 +72,11 @@ class AckermannController:
             MultiDOFJointTrajectory,
             self.desired_waypoints_cb
         )
+        rospy.Subscriber(
+            "/carla/{}/vehicle_control_cmd".format(rolename),
+            CarlaEgoVehicleControl,
+            self.carla_ego_control_cb
+        )
 
         # Publishers
         self.command_pub = rospy.Publisher(
@@ -78,6 +88,11 @@ class AckermannController:
             "tracking_point_mkr",
             Marker,
             queue_size=10
+        )
+        self.override_control_pub = rospy.Publisher(
+            "/carla/{}/vehicle_control_cmd".format(rolename),
+            CarlaEgoVehicleControl,
+            queue_size=1
         )
 
         topic = "/carla/{}/vehicle_info".format(rolename)
@@ -93,6 +108,9 @@ class AckermannController:
             rospy.Duration(1.0/ctrl_freq),
             self.timer_cb
         )
+
+    def carla_ego_control_cb(self, msg):
+        self.override_cmd = msg
 
     def desired_waypoints_cb(self, msg):
         '''
@@ -135,7 +153,7 @@ class AckermannController:
         This is a callback for the class timer, which will be called every
         tick.
 
-        The callback calculates the target values of the AckermannDrive
+        The callback calculates the desired parameters of the AckermannDrive
         message and publishes the command to the ego vehicle's Ackermann
         control topic.
 
@@ -146,84 +164,78 @@ class AckermannController:
         '''
         current_time = rospy.get_time()
         # delta_t = current_time - self.time
-        delta_t = self.time_step
+        # delta_t = self.time_step
         # delta_t = 0.05
         self.time = current_time
-        jerk = 2.0
+        desired_steer = 0.0
+        desired_speed = 0.0
+        desired_acceleration = 0.0
+        desired_jerk = 0.0
+
+        ctr_mode = rospy.get_param("ctr_mode")
 
         # Initializes the AckermannDrive message; All values 0 unless specified
         cmd_msg = AckermannDrive()
-        cmd_msg.jerk = jerk
 
-        if self.pathReady and self.stateReady:
+        if self.pathReady and self.stateReady and ctr_mode != MODE_EMERGENCY:
             pos_x, pos_y = self.state.get_position()
 
             # Pick target w/o collision avoidance. Find the closest point in
             # the trajectory tree.
             _, idx = self.path_tree.query([pos_x, pos_y])
 
-            # Steering target. Three points ahead of closest point.
-            if idx < self.traj_steps - 3:
-                target_pt = self.path_tree.data[idx + 3, :]
+            # Steering target. Some points ahead of closest point.
+            points_ahead = 4
+            if idx < self.traj_steps - points_ahead:
+                target_pt = self.path_tree.data[idx + points_ahead, :]
             else:
                 target_pt = self.path_tree.data[-1, :]
                 rospy.logwarn("At the end of the desired waypoints!")
 
             # Velocity target. Use the desired velocity from closest point.
-            if idx < self.traj_steps:
-                target_vel = self.vel_path[idx, :]
+            points_ahead = 0
+            if idx < self.traj_steps - points_ahead:
+                target_vel = self.vel_path[idx + points_ahead, :]
             else:
                 target_vel = self.vel_path[-1, :]
 
-            target_speed = np.linalg.norm(target_vel)
+            (
+                desired_speed, desired_acceleration, desired_jerk
+            ) = self.compute_ackermann_long_params(target_vel)
 
-            speed_diff = target_speed - self.state.get_speed()
-            acceleration = abs(speed_diff) / (2.0 * delta_t)
-            cmd_msg.acceleration = np.min([1.5, acceleration])
-            steer = self.compute_ackermann_steer(target_pt)
-
-            steer_diff = abs(steer - self.steer_prev)
-            rospy.logdebug("Steering difference: %f", steer_diff)
+            desired_steer = self.compute_ackermann_steer(target_pt)
+            steer_diff = abs(desired_steer - self.steer_prev)
+            rospy.logdebug("Steering difference: {}".format(steer_diff))
 
             if steer_diff >= 0.3:
                 rospy.logdebug("Large difference; Use last steering command")
-                steer = self.steer_prev
-            elif steer_diff >= 0.05:
-                acceleration = 0.0
-                target_speed = target_speed / 5.0
+                desired_steer = self.steer_prev
 
-            self.steer_prev = steer
+            # Reduce the desired speed when taking sharp turns
+            if abs(desired_steer) >= 0.2:
+                desired_speed *= 0.75
+                self.override_cmd.hand_brake = True
+                self.override_control_pub.publish(self.override_cmd)
+            elif abs(desired_steer) >= 0.1:
+                desired_speed *= 0.85
+            elif abs(desired_steer) >= 0.05:
+                desired_speed *= 0.90
 
-            if self.state.get_speed() - target_speed > 0.0:
-                acceleration = -100.0
-                cmd_msg.speed = target_speed / 5.0
-                jerk = 1000.0
-            elif target_speed - self.state.get_speed() > 0.2:
-                acceleration = np.min([3.0, acceleration])
-            else:
-                acceleration = 0.0
+            self.steer_prev = desired_steer
 
-            cmd_msg.steering_angle = steer
-            cmd_msg.speed = target_speed
-            cmd_msg.acceleration = acceleration
-            cmd_msg.jerk = jerk
+            cmd_msg.steering_angle = desired_steer
+            cmd_msg.speed = desired_speed
+            cmd_msg.acceleration = desired_acceleration
+            cmd_msg.jerk = desired_jerk
 
             # For visualization purposes and debuging control node
-            mk_msg = Marker()
-            mk_msg.header.stamp = rospy.Time.now()
-            mk_msg.header.frame_id = 'map'
-            mk_msg.pose.position.x = target_pt[0]
-            mk_msg.pose.position.y = target_pt[1]
-            mk_msg.type = Marker.CUBE
-            mk_msg.scale.x = 3
-            mk_msg.scale.y = 3
-            mk_msg.scale.z = 3
-            mk_msg.color.a = 1.0
-            mk_msg.color.r = 1
-            mk_msg.color.b = 1
-            self.tracking_pt_viz_pub.publish(mk_msg)
+            self.publish_markers(target_pt)
 
-        # self.vehicle_cmd_pub.publish(vehicle_cmd_msg)
+        if ctr_mode == MODE_EMERGENCY:
+            self.override_cmd.brake = 1.0
+            self.override_cmd.throttle = 0.0
+            self.override_control_pub.publish(self.override_cmd)
+
         self.command_pub.publish(cmd_msg)
 
     def compute_ackermann_long_params(self, target_velocity):
@@ -250,10 +262,22 @@ class AckermannController:
         desired_speed = np.linalg.norm(target_velocity)
 
         # Calculate the desired acceleration
-        speed_diff = desired_speed - self.state.get_speed()
-        acceleration = abs(speed_diff) / (2.0 * self.time_step)
+        current_speed = self.state.get_speed()
+        speed_diff = desired_speed - current_speed
+        acceleration = speed_diff * FREEFLOW_SPEED
+        desired_acceleration = np.clip(
+            acceleration, -MAX_DECELERATION, MAX_ACCELERATION
+        )
 
-        desired_acceleration = acceleration
+        # Calculate desired jerk
+        jerk = 0.0
+        desired_jerk = np.clip(jerk, 0.0, MAX_JERK)
+
+        rospy.logdebug(
+            "Desired long parameters (speed, accel, jerk): {}, {}, {}".format(
+                desired_speed, desired_acceleration, desired_jerk
+            )
+        )
 
         return (desired_speed, desired_acceleration, desired_jerk)
 
@@ -299,6 +323,21 @@ class AckermannController:
         self.steer_cache = steer
 
         return steer
+
+    def publish_markers(self, target_pt):
+        mk_msg = Marker()
+        mk_msg.header.stamp = rospy.Time.now()
+        mk_msg.header.frame_id = 'map'
+        mk_msg.pose.position.x = target_pt[0]
+        mk_msg.pose.position.y = target_pt[1]
+        mk_msg.type = Marker.CUBE
+        mk_msg.scale.x = 3
+        mk_msg.scale.y = 3
+        mk_msg.scale.z = 3
+        mk_msg.color.a = 1.0
+        mk_msg.color.r = 1
+        mk_msg.color.b = 1
+        self.tracking_pt_viz_pub.publish(mk_msg)
 
 
 if __name__ == '__main__':
