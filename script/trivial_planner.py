@@ -14,8 +14,8 @@ from map_updater import OdometryState
 from predictor_module import TrajectoryPredictor
 
 # Import some constants
-from constants import MODE_NORMAL, MODE_EMERGENCY
-from constants import MAX_ACCELERATION, MAX_DECELERATION
+from constants_module import MODE_NORMAL, MODE_EMERGENCY
+from constants_module import MAX_ACCELERATION, MAX_DECELERATION
 
 
 class TrivialPlanner:

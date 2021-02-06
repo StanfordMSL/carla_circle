@@ -14,9 +14,9 @@ import numpy as np
 from map_updater import OdometryState
 
 # Import some constants
-from constants import MODE_EMERGENCY
-from constants import MAX_ACCELERATION, MAX_DECELERATION, MAX_JERK
-from constants import FREEFLOW_SPEED
+from constants_module import MODE_EMERGENCY
+from constants_module import MAX_ACCELERATION, MAX_DECELERATION, MAX_JERK
+from constants_module import FREEFLOW_SPEED
 
 
 class AckermannController:

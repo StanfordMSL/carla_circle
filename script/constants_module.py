@@ -1,4 +1,4 @@
-
+# Module to define several constants used throughout the AV stack
 MAX_ACCELERATION = 3.0  # [m/s^2] (positive)
 MAX_DECELERATION = 9.0  # [m/s^2] (positive)
 MAX_JERK = 1.3  # [m/s^3] (positive)
