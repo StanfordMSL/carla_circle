@@ -61,7 +61,7 @@ except IndexError:
 # -- imports -------------------------------------------------------------------
 # ==============================================================================
 
-import utilities.PossiblePaths
+import possible_paths
 
 import carla
 
@@ -668,7 +668,7 @@ def game_loop(args):
                 return
 
             if count % 60 == 0:
-                paths = utilities.PossiblePaths.compute_all_paths_for_actor(
+                paths = possible_paths.compute_all_paths_for_actor(
                     world.vehicle,
                     3.0,
                     10,
@@ -677,7 +677,7 @@ def game_loop(args):
 
             count += 1
 
-            utilities.PossiblePaths.draw_paths(
+            possible_paths.draw_paths(
                 paths,
                 world.world,
                 1.0

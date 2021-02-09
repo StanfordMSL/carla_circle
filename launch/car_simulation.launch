@@ -37,7 +37,7 @@
 
 
 		<!-- Controller node -->
-		<node name="controller" pkg="carla_circle" type="controller.py" output="screen">
+		<node name="controller" pkg="carla_circle" type="ackermann_controller.py" output="screen">
 			<param name="rolename" value="$(arg rolename)" />
 			<param name="time_step" value="$(arg time_step)" />
 			<param name="ctrl_freq" value="100" />
