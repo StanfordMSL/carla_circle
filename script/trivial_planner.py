@@ -12,6 +12,7 @@ import numpy as np
 
 from map_updater import OdometryState
 from predictor_module import TrajectoryPredictor
+from trajectory_optimization_module import trajectory_optimization
 
 # Import some constants
 from constants_module import MODE_NORMAL, MODE_EMERGENCY
@@ -191,7 +192,7 @@ class TrivialPlanner:
                         max(
                             (
                                 current_speed -
-                                MAX_DECELERATION*i*self.time_step
+                                MAX_DECELERATION * i * self.time_step
                             ),
                             0.0
                         )
@@ -243,6 +244,8 @@ class TrivialPlanner:
                     )
                 ]
                 traj_msg.points.append(traj_point)
+
+            traj_msg = trajectory_optimization(traj_msg, self.time_step)
 
             self.trajectory_pub.publish(traj_msg)
 
